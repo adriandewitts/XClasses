@@ -7,8 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		3ACEF6491DAF41FF00F46C62 /* XClasses.m in Sources */ = {isa = PBXBuildFile; fileRef = 3ACEF6481DAF41FF00F46C62 /* XClasses.m */; };
-		3ACEF64A1DAF41FF00F46C62 /* XClasses.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3ACEF6471DAF41FF00F46C62 /* XClasses.h */; };
+		3ACEF6541DAF430A00F46C62 /* Convenience.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ACEF6501DAF430A00F46C62 /* Convenience.swift */; };
+		3ACEF6551DAF430A00F46C62 /* NSScanner+Swift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ACEF6511DAF430A00F46C62 /* NSScanner+Swift.swift */; };
+		3ACEF6561DAF430A00F46C62 /* XClasses.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ACEF6521DAF430A00F46C62 /* XClasses.swift */; };
+		3ACEF6571DAF430A00F46C62 /* XViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ACEF6531DAF430A00F46C62 /* XViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -18,7 +20,6 @@
 			dstPath = "include/$(PRODUCT_NAME)";
 			dstSubfolderSpec = 16;
 			files = (
-				3ACEF64A1DAF41FF00F46C62 /* XClasses.h in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -26,8 +27,10 @@
 
 /* Begin PBXFileReference section */
 		3ACEF6441DAF41FF00F46C62 /* libXClasses.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libXClasses.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		3ACEF6471DAF41FF00F46C62 /* XClasses.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XClasses.h; sourceTree = "<group>"; };
-		3ACEF6481DAF41FF00F46C62 /* XClasses.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = XClasses.m; sourceTree = "<group>"; };
+		3ACEF6501DAF430A00F46C62 /* Convenience.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Convenience.swift; sourceTree = "<group>"; };
+		3ACEF6511DAF430A00F46C62 /* NSScanner+Swift.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "NSScanner+Swift.swift"; sourceTree = "<group>"; };
+		3ACEF6521DAF430A00F46C62 /* XClasses.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XClasses.swift; sourceTree = "<group>"; };
+		3ACEF6531DAF430A00F46C62 /* XViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,8 +63,10 @@
 		3ACEF6461DAF41FF00F46C62 /* XClasses */ = {
 			isa = PBXGroup;
 			children = (
-				3ACEF6471DAF41FF00F46C62 /* XClasses.h */,
-				3ACEF6481DAF41FF00F46C62 /* XClasses.m */,
+				3ACEF6501DAF430A00F46C62 /* Convenience.swift */,
+				3ACEF6511DAF430A00F46C62 /* NSScanner+Swift.swift */,
+				3ACEF6521DAF430A00F46C62 /* XClasses.swift */,
+				3ACEF6531DAF430A00F46C62 /* XViewModel.swift */,
 			);
 			path = XClasses;
 			sourceTree = "<group>";
@@ -98,6 +103,7 @@
 					3ACEF6431DAF41FF00F46C62 = {
 						CreatedOnToolsVersion = 8.0;
 						DevelopmentTeam = BVS2D89Y9E;
+						LastSwiftMigration = 0800;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -124,7 +130,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3ACEF6491DAF41FF00F46C62 /* XClasses.m in Sources */,
+				3ACEF6541DAF430A00F46C62 /* Convenience.swift in Sources */,
+				3ACEF6561DAF430A00F46C62 /* XClasses.swift in Sources */,
+				3ACEF6551DAF430A00F46C62 /* NSScanner+Swift.swift in Sources */,
+				3ACEF6571DAF430A00F46C62 /* XViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -222,20 +231,27 @@
 		3ACEF64E1DAF41FF00F46C62 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				DEVELOPMENT_TEAM = BVS2D89Y9E;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Debug;
 		};
 		3ACEF64F1DAF41FF00F46C62 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				DEVELOPMENT_TEAM = BVS2D89Y9E;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 3.0;
 			};
 			name = Release;
 		};
