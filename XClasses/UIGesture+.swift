@@ -8,24 +8,6 @@
 
 import UIKit
 
-// Need a String convenience method to load from either a local path or external url
-// Need a URL method to do the above as well
-
-extension Bundle
-{
-    class func resource(path: String) -> String?
-    {
-        do
-        {
-            let path = Bundle.main.path(forResource: path, ofType: nil)!
-            return try String(contentsOfFile: path)
-        }
-        catch { return nil }
-    }
-}
-
-// Mark: Direction of Pan
-
 public enum Direction: Int
 {
     case Up

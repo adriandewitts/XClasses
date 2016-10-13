@@ -14,7 +14,7 @@ class RealmString: Object
     dynamic var stringValue = ""
 }
 
-class XViewModel : Object
+class ViewModel : Object
 {
     dynamic var id = UUID().uuidString
     dynamic var createdAt = NSDate()
