@@ -17,12 +17,12 @@ func screenSize() -> CGSize
 
 // Mark: View & Flow Controllers
 
-protocol XViewController
+protocol XViewModelController
 {
     var viewModel: ViewModel { get set }
 }
 
-class XUIFlowController: XViewController
+class XUIFlowController: XViewModelController
 {
     static let sharedInstance = XUIFlowController()
     var viewModel = ViewModel()

@@ -9,7 +9,7 @@
 import UIKit
 import Nuke
 
-class XUICollectionViewController: UICollectionViewController, XViewController
+class XUICollectionViewController: UICollectionViewController, XViewModelController
 {
     let flowController = XUIFlowController.sharedInstance
     var viewModel = ViewModel()
