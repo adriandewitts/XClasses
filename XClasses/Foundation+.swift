@@ -8,18 +8,57 @@
 
 import Foundation
 
-// Need a String convenience method to load from either a local path or external url
-// Need a URL method to do the above as well
-
 extension Bundle
 {
-    class func resource(path: String) -> String?
+    class func contents(fileName: String) -> String?
     {
         do
         {
-            let path = Bundle.main.path(forResource: path, ofType: nil)!
-            return try String(contentsOfFile: path)
+            return try String(contentsOfFile: Bundle.main.path(forResource: fileName, ofType: nil)!)
         }
         catch { return nil }
     }
 }
+
+extension String
+{
+    func toURLString() -> String
+    {
+        if self.hasPrefix("/")
+        {
+            return "file://\(self)"
+        }
+        if self.hasPrefix("http://")
+        {
+            return self
+        }
+
+        if let URLString = Bundle.main.path(forResource: self, ofType: nil)
+        {
+            return "file://\(URLString)"
+        }
+
+        return "file://\(Bundle.main.path(forResource: "default", ofType: "png")!)"
+    }
+
+    func toURL() -> URL
+    {
+        return URL(string: self.toURLString())!
+    }
+
+    func toContents() -> String
+    {
+        // Will need to do checks and return nothing if needs be
+        return try! String(contentsOfFile: self.toURLString())
+    }
+
+//    func toData()
+//    {
+//        return try! Data(contentsOf: self.toURL())
+//    }
+}
+
+// String - file path, web url, file bundle
+// input: String, URL
+// output: String path, URL, string contents, data
+// string to string, string to URL, string to contents, string to data, url to contents, url to data

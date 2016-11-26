@@ -14,19 +14,24 @@ class RealmString: Object
     dynamic var stringValue = ""
 }
 
-class ViewModel : Object
+public class ViewModel : Object
 {
-    dynamic var id = UUID().uuidString
-    dynamic var createdAt = NSDate()
-    dynamic var updatedAt = NSDate()
+//    dynamic var id = UUID().uuidString
+//    dynamic var createdAt = NSDate()
+//    dynamic var updatedAt = NSDate()
     
-    override static func primaryKey() -> String?
-    {
-        return "id"
-    }
-    
+//    override public static func primaryKey() -> String?
+//    {
+//        return "id"
+//    }
+
     func properties() -> [String: String]
     {
-        return ["title": "Placeholder", "path": "define the app path", "image": "find a default"]
+        return ["title": "Placeholder", "path": "/", "image": "default.png"]
+    }
+
+    func relatedCollection() -> [ViewModel]
+    {
+        return [ViewModel()]
     }
 }

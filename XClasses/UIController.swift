@@ -17,50 +17,64 @@ func screenSize() -> CGSize
 
 // Mark: View & Flow Controllers
 
-protocol XViewModelController
+protocol ViewModelDelegate
 {
     var viewModel: ViewModel { get set }
 }
 
-class XUIFlowController: XViewModelController
+class XUIFlowController: ViewModelDelegate
 {
     static let sharedInstance = XUIFlowController()
     var viewModel = ViewModel()
+    var pageControllerStoryBoardID = ""
 }
 
-class XUIViewController: UIViewController
+func pullViewModel(viewModel: ViewModel) -> ViewModel
 {
     let flowController = XUIFlowController.sharedInstance
+    var vm = viewModel
+
+    if String(describing: type(of: viewModel)) == "ViewModel"
+    {
+        vm = flowController.viewModel
+    }
+
+    return vm
+}
+
+class XUIViewController: UIViewController, ViewModelDelegate
+{
     var viewModel = ViewModel()
     
     override func viewDidLoad()
     {
         super.viewDidLoad()
-        viewModel = self.flowController.viewModel
+
+        viewModel = pullViewModel(viewModel: viewModel)
     }
 }
 
-class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSource, UIPageViewControllerDelegate
+class XSplitViewController: UISplitViewController, UISplitViewControllerDelegate
 {
-    let flowController = XUIFlowController.sharedInstance
-    var viewModel = ViewModel()
-    
     override func viewDidLoad()
     {
         super.viewDidLoad()
-        viewModel = self.flowController.viewModel
-        dataSource = self
-        delegate = self
+
+//        let navigationController = self.viewControllers[self.viewControllers.count - 1] as! UINavigationController
+//        navigationController.topViewController!.navigationItem.leftBarButtonItem = self.displayModeButtonItem
+        self.delegate = self
     }
-    
-    func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController?
+
+    func splitViewController(_ splitViewController: UISplitViewController, collapseSecondary secondaryViewController:UIViewController, onto primaryViewController:UIViewController) -> Bool
     {
-        return nil
-    }
-    
-    func pageViewController(_ pageViewController: UIPageViewController, viewControllerBefore viewController: UIViewController) -> UIViewController?
-    {
-        return nil
+//        guard let secondaryAsNavController = secondaryViewController as? UINavigationController else { return false }
+//        guard let topAsDetailController = secondaryAsNavController.topViewController as? DetailViewController else { return false }
+//        if topAsDetailController.detailItem == nil
+//        {
+//            // Return true to indicate that we have handled the collapse by doing nothing; the secondary controller will be discarded.
+//            return true
+//        }
+        return true
     }
 }
 

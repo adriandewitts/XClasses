@@ -8,12 +8,12 @@
 
 import UIKit
 
-class XUIButton: UIButton
+class XUIButton: UIButton, ViewModelDelegate
 {
     var viewModel = ViewModel()
 }
 
-class XUIImageView: UIImageView
+class XUIImageView: UIImageView, ViewModelDelegate
 {
     var viewModel = ViewModel()
 }
