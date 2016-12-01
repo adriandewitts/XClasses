@@ -34,6 +34,13 @@ class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSourc
 
         let controller = [controllerCollection[0]]
         setViewControllers(controller, direction: .forward, animated: true, completion: nil)
+
+        hideNavigationBar()
+    }
+
+    func hideNavigationBar()
+    {
+        navigationController?.setNavigationBarHidden(true, animated: true)
     }
 
     func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController?
