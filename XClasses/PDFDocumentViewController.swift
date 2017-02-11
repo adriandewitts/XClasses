@@ -23,14 +23,25 @@ import UIKit
 protocol PDFDocumentDelegate
 {
     func pdfDocument() -> PDFDocument
+    func pageRange() -> (Int, Int)
 }
 
-class PDFViewController: XUIPageViewController
+protocol PDFPageDelegate
+{
+    func pdfDocument() -> PDFDocument
+    func number() -> Int
+}
+
+class PDFDocumentViewController: XUIPageViewController
 {
     override func viewDidLoad()
     {
+        viewModel = pullViewModel(viewModel: viewModel)
+        if let delegate = viewModel as? PDFDocumentDelegate
+        {
+            let pdfDocument = delegate.pdfDocument()
+            pdfDocument.cacheImages(pageRange: delegate.pageRange(), rect: self.view.frame)
+        }
         super.viewDidLoad()
-
-        
     }
 }
