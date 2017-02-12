@@ -46,10 +46,17 @@ class XUITableViewController: UITableViewController, ViewModelDelegate
         return viewModelCollection.count
     }
 
+    override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String?
+    {
+        return "Section \(section)"
+    }
+
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
     {
         let cell = tableView.dequeueReusableCell(withIdentifier: reuseIdentifier, for: indexPath) as! XUITableViewCell
         cell.assignViewModelToView(viewModel: viewModelCollection[indexPath.item])
+
+        print("\(indexPath.item) \(indexPath.row)")
 
         return cell
     }
