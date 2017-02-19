@@ -36,7 +36,9 @@ class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSourc
         let controller = [controllerCollection[0]]
         setViewControllers(controller, direction: .forward, animated: true, completion: nil)
 
-        hideNavigationBar()
+        //hideNavigationBar()
+
+        self.view.backgroundColor = UIColor.yellow
     }
 
     func hideNavigationBar()

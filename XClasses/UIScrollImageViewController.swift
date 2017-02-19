@@ -20,16 +20,6 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
     {
         super.viewDidLoad()
 
-        //scrollView.delegate = self
-        //scrollView.scrollsToTop = false
-        //scrollView.bounces = false
-        //scrollView.showsHorizontalScrollIndicator = false
-        //scrollView.showsVerticalScrollIndicator = false
-        //scrollView.isUserInteractionEnabled = true
-        //scrollView.bouncesZoom = false
-        //scrollView.maximumZoomScale = 2.0
-        //scrollView.minimumZoomScale = 1.0
-
         let singleTap = UITapGestureRecognizer(target: self, action: #selector(toggleNavigation))
         singleTap.numberOfTapsRequired = 1
         singleTap.cancelsTouchesInView = false
@@ -61,16 +51,28 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
             }
         }
 
-        let width = CGFloat(self.view.bounds.size.width / imageView.frame.size.width)
-        let height = CGFloat(self.view.bounds.size.height / imageView.frame.size.height)
-        let zoom: CGFloat = min(width, height)
+        fitView()
+        navigationController?.setNavigationBarHidden(true, animated: true)
+    }
+
+    func fitView()
+    {
+        let width = CGFloat(scrollView.bounds.size.width / imageView.frame.size.width)
+        let height = CGFloat(scrollView.bounds.size.height / imageView.frame.size.height)
+        var zoom: CGFloat = 0.0
+
+        switch scrollView.contentMode
+        {
+            case UIViewContentMode.scaleAspectFill:
+                zoom = max(width, height)
+            default:
+                zoom = min(width, height) // Default to UIViewContentMode.scaleAspectFit
+        }
 
         scrollView.minimumZoomScale = zoom
         scrollView.maximumZoomScale = zoom * 3
         scrollView.zoomScale = zoom
     }
-
-
 
     // Gestures
 
@@ -98,6 +100,6 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
 
     func viewForZooming(in scrollView: UIScrollView) -> UIView?
     {
-        return scrollView.subviews[0]
+        return imageView
     }
 }
