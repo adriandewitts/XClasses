@@ -17,19 +17,18 @@ func screenSize() -> CGSize
 
 // Mark: View & Flow Controllers
 
-protocol ViewModelDelegate
+protocol ViewModelManagerDelegate
 {
-    var viewModel: ViewModel { get set }
+    var viewModel: ViewModelDelegate { get set }
 }
 
-class XUIFlowController: ViewModelDelegate
+class XUIFlowController: ViewModelManagerDelegate
 {
     static let sharedInstance = XUIFlowController()
-    var viewModel = ViewModel()
-    var pageControllerStoryBoardID = ""
+    var viewModel = ViewModel() as ViewModelDelegate
 }
 
-func pullViewModel(viewModel: ViewModel) -> ViewModel
+func pullViewModel(viewModel: ViewModelDelegate) -> ViewModelDelegate
 {
     let flowController = XUIFlowController.sharedInstance
     var vm = viewModel
@@ -42,15 +41,19 @@ func pullViewModel(viewModel: ViewModel) -> ViewModel
     return vm
 }
 
-class XUIViewController: UIViewController, ViewModelDelegate
+class XUIViewController: UIViewController, ViewModelManagerDelegate
 {
-    var viewModel = ViewModel()
+    var viewModel = ViewModel() as ViewModelDelegate
     
-    override func viewDidLoad()
+    override init(nibName: String?, bundle: Bundle?)
     {
-        super.viewDidLoad()
-
         viewModel = pullViewModel(viewModel: viewModel)
+        super.init(nibName: nibName, bundle: bundle)
+    }
+
+    required init?(coder aDecoder: NSCoder)
+    {
+        super.init(coder: aDecoder)
     }
 }
 

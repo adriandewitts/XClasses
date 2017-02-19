@@ -9,10 +9,10 @@
 import UIKit
 import Nuke
 
-class XUICollectionViewController: UICollectionViewController, ViewModelDelegate
+class XUICollectionViewController: UICollectionViewController, ViewModelManagerDelegate
 {
-    var viewModel = ViewModel()
-    var viewModelCollection = [ViewModel()]
+    var viewModel = ViewModel() as ViewModelDelegate
+    var viewModelCollection = [ViewModel() as ViewModelDelegate]
     var numberOfSections = 1
     var numberOfItems = 1
     var reuseIdentifier = "Cell"
@@ -73,19 +73,19 @@ class XUICollectionViewController: UICollectionViewController, ViewModelDelegate
     }
 }
 
-class XUICollectionViewCell: UICollectionViewCell, ViewModelDelegate
+class XUICollectionViewCell: UICollectionViewCell, ViewModelManagerDelegate
 {
-    var viewModel = ViewModel()
-    @IBOutlet weak var image: XUIImageView!
+    var viewModel = ViewModel() as ViewModelDelegate
+    @IBOutlet weak var imageView: XUIImageView!
 
-    func assignViewModelToView(viewModel: ViewModel)
+    func assignViewModelToView(viewModel: ViewModelDelegate)
     {
         self.viewModel = viewModel
         let properties = viewModel.properties()
         if let imagePath = properties["image"]
         {
-            image.contentMode = UIViewContentMode.scaleAspectFit
-            Nuke.loadImage(with: URL(string: imagePath)!, into: image)
+            imageView.contentMode = UIViewContentMode.scaleAspectFit
+            Nuke.loadImage(with: URL(string: imagePath)!, into: imageView)
         }
     }
 }

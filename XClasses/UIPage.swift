@@ -8,12 +8,13 @@
 
 import UIKit
 
-class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSource, UIPageViewControllerDelegate, ViewModelDelegate
+class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSource, UIPageViewControllerDelegate, ViewModelManagerDelegate
 {
-    var viewModel = ViewModel()
-    var viewModelCollection = [ViewModel()]
+    var viewModel = ViewModel() as ViewModelDelegate
+    var viewModelCollection = [ViewModel() as ViewModelDelegate]
     var controllerCollection: [UIViewController] = []
     var currentPageControllerIndex = 0
+    var pageControllerStoryBoardID = "ScrollImageViewID"
 
     override func viewDidLoad()
     {
@@ -27,7 +28,7 @@ class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSourc
 
         for vm in viewModelCollection
         {
-            var pc = UIStoryboard(name: "Main", bundle: nil).instantiateViewController(withIdentifier: XUIFlowController.sharedInstance.pageControllerStoryBoardID) as! ViewModelDelegate
+            var pc = UIStoryboard(name: "Main", bundle: nil).instantiateViewController(withIdentifier: pageControllerStoryBoardID) as! ViewModelManagerDelegate
             pc.viewModel = vm
             controllerCollection.append(pc as! UIViewController)
         }

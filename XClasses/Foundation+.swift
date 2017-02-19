@@ -35,7 +35,8 @@ extension String
 
         if let URLString = Bundle.main.path(forResource: self, ofType: nil)
         {
-            return "file://\(URLString)"
+            let escaped = URLString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+            return "file://\(escaped)"
         }
 
         return "file://\(Bundle.main.path(forResource: "default", ofType: "png")!)"
@@ -43,7 +44,8 @@ extension String
 
     func toURL() -> URL
     {
-        return URL(string: self.toURLString())!
+        let escaped = self.toURLString()
+        return URL(string: escaped)!
     }
 
     func toContents() -> String

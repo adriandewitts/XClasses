@@ -8,10 +8,13 @@
 
 import UIKit
 
-class PDFPageView: UIScrollView
-{
-    
-}
+//class PDFPageView: UIScrollView
+//{
+//    func doAnything()
+//    {
+//
+//    }
+//}
 
 class PDFPageSubview: UIView
 {

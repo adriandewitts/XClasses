@@ -9,11 +9,10 @@
 import UIKit
 import Nuke
 
-class XUITableViewController: UITableViewController, ViewModelDelegate
+class XUITableViewController: UITableViewController, ViewModelManagerDelegate
 {
-    var viewModel = ViewModel()
-    var viewModelCollection = [ViewModel()]
-    var numberOfSections = 1
+    var viewModel = ViewModel() as ViewModelDelegate
+    var viewModelCollection = [ViewModel() as ViewModelDelegate]
     var reuseIdentifier = "Cell"
 
     override func viewDidLoad()
@@ -38,27 +37,28 @@ class XUITableViewController: UITableViewController, ViewModelDelegate
 
     override func numberOfSections(in tableView: UITableView) -> Int
     {
-        return numberOfSections
+        return viewModelCollection.count
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int
     {
-        return viewModelCollection.count
-    }
-
-    override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String?
-    {
-        return "Section \(section)"
+        return viewModelCollection[section].relatedCollection().count
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
     {
         let cell = tableView.dequeueReusableCell(withIdentifier: reuseIdentifier, for: indexPath) as! XUITableViewCell
-        cell.assignViewModelToView(viewModel: viewModelCollection[indexPath.item])
-
-        print("\(indexPath.item) \(indexPath.row)")
+        cell.assignViewModelToView(viewModel: viewModelCollection[indexPath.section].relatedCollection()[indexPath.item])
 
         return cell
+    }
+
+    override func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView?
+    {
+        let headerCell = tableView.dequeueReusableCell(withIdentifier: "HeaderCell") as! XUITableViewCell
+        headerCell.assignViewModelToView(viewModel: viewModelCollection[section])
+
+        return headerCell
     }
 
     override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool
@@ -67,14 +67,14 @@ class XUITableViewController: UITableViewController, ViewModelDelegate
     }
 }
 
-class XUITableViewCell: UITableViewCell, ViewModelDelegate
+class XUITableViewCell: UITableViewCell, ViewModelManagerDelegate
 {
-    var viewModel = ViewModel()
+    var viewModel = ViewModel() as ViewModelDelegate
 
     @IBOutlet var thumb: UIImageView!
     @IBOutlet var title: UILabel!
 
-    func assignViewModelToView(viewModel: ViewModel)
+    func assignViewModelToView(viewModel: ViewModelDelegate)
     {
         self.viewModel = viewModel
         let properties = viewModel.properties()

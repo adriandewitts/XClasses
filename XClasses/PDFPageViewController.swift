@@ -8,37 +8,38 @@
 
 import UIKit
 
-class PDFPageViewController: XUIViewController//, PDFPageViewDelegate
+class PDFPageViewController: UIScrollImageViewController//, PDFPageViewDelegate
 {
-    var pdfDocument: PDFDocument? = nil
-    var pageNumber = 0
+//    var pdfDocument: PDFDocument? = nil
+//    var index = 0
 
     override func viewDidLoad()
     {
-        super.viewDidLoad()
 
-        //let pdfView = self.view as! PDFPageView
+
         //pdfView.pageViewDelegate = self
 
-        if let page = viewModel as? Text
+        if let page = viewModel as? PDFPageDelegate
         {
-            pageNumber = page.number()
-            pdfDocument = page.pdfDocument()
-            let scrollView = self.view as! UIScrollView
-            //pdfView.setPDFDocument(document: pdfDocument!, pageNumber: pageNumber)
-            //let image = pdfDocument?.pdfPageImage(at: pageNumber)
-            //let uiImageView = UIImageView(image: image)
-            let pdfSubView = PDFPageSubview(pdfDocument: pdfDocument!, pageNumber: pageNumber, rect: self.view.frame)
-            scrollView.addSubview(pdfSubView)
-            //scrollView.sendSubview(toBack: pdfSubView)
-            scrollView.contentSize = self.view.frame.size
-            scrollView.setNeedsDisplay()
-        }
-    }
+            self.image = page.pdfDocument().pdfPageImage(at: page.index())
 
-    func handleSingleTap(_ pdfPageView: PDFPageView)
-    {
-        navigationController?.setNavigationBarHidden(navigationController?.isNavigationBarHidden == false, animated: true)
+
+
+//            let imageView = UIImageView(image: image)
+//
+//            imageView.frame = scrollView.frame
+//
+//            scrollView.addSubview(imageView)
+
+//            let pdfSubView = PDFPageSubview(pdfDocument: pdfDocument!, pageNumber: index, rect: self.view.frame)
+//            scrollView.addSubview(pdfSubView)
+//
+//            scrollView.sendSubview(toBack: pdfSubView)
+//            scrollView.contentSize = self.view.frame.size
+//            scrollView.setNeedsDisplay()
+        }
+
+        super.viewDidLoad()
     }
 
 //    override func viewWillLayoutSubviews()

@@ -9,28 +9,35 @@
 import Foundation
 import RealmSwift
 
+protocol ViewModelDelegate
+{
+    func properties() -> [String: String]
+    func relatedCollection() -> [ViewModelDelegate]
+}
+
 class RealmString: Object
 {
     dynamic var stringValue = ""
 }
 
-public class ViewModel : Object
+public class ViewModel: Object, ViewModelDelegate
 {
-//    dynamic var id = UUID().uuidString
-//    dynamic var createdAt = NSDate()
-//    dynamic var updatedAt = NSDate()
+    dynamic var id = UUID().uuidString
+    dynamic var createdAt = NSDate()
+    dynamic var updatedAt = NSDate()
+    dynamic var deletedAt = NSDate()
     
-//    override public static func primaryKey() -> String?
-//    {
-//        return "id"
-//    }
+    override public static func primaryKey() -> String?
+    {
+        return "id"
+    }
 
     func properties() -> [String: String]
     {
         return ["title": "Placeholder", "path": "/", "image": "default.png"]
     }
 
-    func relatedCollection() -> [ViewModel]
+    func relatedCollection() -> [ViewModelDelegate]
     {
         return [ViewModel()]
     }

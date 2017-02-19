@@ -18,27 +18,34 @@ class PDFDocument
         pdfDocument = CGPDFDocument(path.toURL() as CFURL)
     }
 
-    func cacheImages(pageRange: (Int, Int), rect: CGRect)
+    func cachePages(index: Int, rect: CGRect)
     {
-        let (startPageNumber, endPageNumber) = pageRange
-        // Do page caching as specified by the delegate
-        for pageNumber in startPageNumber...endPageNumber
+        // Fan out the caching from the page to be cached
+        cachePage(index: index, rect: rect)
+        cachePage(index: index + 1, rect: rect)
+        cachePage(index: index - 1, rect: rect)
+        cachePage(index: index + 2, rect: rect)
+        cachePage(index: index - 2, rect: rect)
+    }
+
+    func cachePage(index: Int, rect: CGRect)
+    {
+        // put in threading here
+        if index >= 0 || index < pdfDocument!.numberOfPages
         {
-            // put in threading here
-            let n = NSNumber(value: pageNumber)
+            let n = NSNumber(value: index)
             if cachedImages.object(forKey: n) == nil
             {
-                if let uiImage = pdfDocument!.uiImageFromPDFPage(pageNumber: pageNumber, rect: rect)
+                if let uiImage = pdfDocument!.uiImageFromPDFPage(pageNumber: index + 1, rect: rect)
                 {
                     cachedImages.setObject(uiImage, forKey: n)
                 }
-
             }
         }
     }
 
-    func pdfPageImage(at pageNumber: Int) -> UIImage?
+    func pdfPageImage(at index: Int) -> UIImage?
     {
-        return self.cachedImages.object(forKey: NSNumber(value: pageNumber))
+        return self.cachedImages.object(forKey: NSNumber(value: index))
     }
 }
