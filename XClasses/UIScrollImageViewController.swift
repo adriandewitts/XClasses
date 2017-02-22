@@ -15,6 +15,7 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
 
     @IBOutlet var scrollView: UIScrollView!
     @IBOutlet var imageView: UIImageView!
+    var freshView = true
 
     override func viewDidLoad()
     {
@@ -35,11 +36,9 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
         imageView.contentMode = UIViewContentMode.scaleAspectFit
 
         // Use image object variable, or image in viewmodel
-
         if image != nil
         {
             imageView.image = image
-            imageView.sizeToFit()
         }
         else
         {
@@ -51,27 +50,49 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
             }
         }
 
-        fitView()
         navigationController?.setNavigationBarHidden(true, animated: true)
     }
 
-    func fitView()
+    override func viewDidLayoutSubviews()
     {
-        let width = CGFloat(scrollView.bounds.size.width / imageView.frame.size.width)
-        let height = CGFloat(scrollView.bounds.size.height / imageView.frame.size.height)
+        super.viewDidLayoutSubviews()
+        if freshView
+        {
+            fitView(size: scrollView.bounds.size)
+        }
+    }
+
+    func fitView(size: CGSize)
+    {
+        if let image = image
+        {
+            imageView.frame.size = image.size.proportionalSizing(to: size, aspectFill: scrollView.contentMode == .scaleAspectFill)
+        }
+
+        let widthRatio = CGFloat(size.width / imageView.frame.size.width)
+        let heightRatio = CGFloat(size.height / imageView.frame.size.height)
         var zoom: CGFloat = 0.0
 
-        switch scrollView.contentMode
+        if scrollView.contentMode == .scaleAspectFill
         {
-            case UIViewContentMode.scaleAspectFill:
-                zoom = max(width, height)
-            default:
-                zoom = min(width, height) // Default to UIViewContentMode.scaleAspectFit
+            zoom = max(widthRatio, heightRatio)
+        }
+        else
+        {
+            zoom = min(widthRatio, heightRatio)
         }
 
         scrollView.minimumZoomScale = zoom
-        scrollView.maximumZoomScale = zoom * 3
+        scrollView.maximumZoomScale = zoom * 2
         scrollView.zoomScale = zoom
+
+        freshView = false
+    }
+
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator)
+    {
+        fitView(size: size)
+        super.viewWillTransition(to: size, with: coordinator)
     }
 
     // Gestures

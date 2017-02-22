@@ -7,29 +7,47 @@
 //
 
 import UIKit
+import AssistantKit
+
+extension Device
+{
+    static func scaleAsCGFloat() -> CGFloat
+    {
+        let scale = Device.scale
+
+        switch scale
+        {
+            case .x1: return 1.0
+            case .x2: return 2.0
+            case .x3: return 3.0
+            default:  return 2.0
+        }
+    }
+}
 
 extension CGPDFDocument
 {
-    func uiImageFromPDFPage(pageNumber: Int, rect: CGRect, aspectFill: Bool = true) -> UIImage?
+    func uiImageFromPDFPage(pageNumber: Int, size: CGSize, aspectFill: Bool = true) -> UIImage?
     {
         guard let page = self.page(at: pageNumber) else { return nil }
 
         // Determine the size of the PDF page.
+        // TODO use proportional sizing below
         var pageRect = page.getBoxRect(.mediaBox)
-        let widthRatio = Double(rect.size.width) / Double(pageRect.size.width)
-        let heightRatio = Double(rect.size.height) / Double(pageRect.size.height)
+        let widthRatio = Double(size.width) / Double(pageRect.size.width)
+        let heightRatio = Double(size.height) / Double(pageRect.size.height)
         var scale: CGFloat = 1.0
 
         if aspectFill
         {
-            scale = CGFloat(min(widthRatio, heightRatio))
+            scale = CGFloat(max(widthRatio, heightRatio))
         }
         else
         {
-            scale = CGFloat(max(widthRatio, heightRatio))
+            scale = CGFloat(min(widthRatio, heightRatio))
         }
 
-        scale *= 2.0
+        scale *= Device.scaleAsCGFloat()
 
         let newRect = CGRect(x: 0.0, y: 0.0, width: scale * pageRect.size.width, height: scale * pageRect.size.height)
 
@@ -58,5 +76,27 @@ extension CGPDFDocument
         guard let image = UIGraphicsGetImageFromCurrentImageContext() else { return nil }
 
         return image
+    }
+}
+
+extension CGSize
+{
+    func proportionalSizing(to size: CGSize, aspectFill: Bool = true) -> CGSize
+    {
+        let widthRatio = size.width / self.width
+        let heightRatio = size.height / self.height
+        var scale: CGFloat = 1.0
+
+        if aspectFill
+        {
+            scale = CGFloat(max(widthRatio, heightRatio))
+        }
+        else
+        {
+            scale = CGFloat(min(widthRatio, heightRatio))
+        }
+
+        let newSize = CGSize(width: scale * self.width, height: scale * self.height)
+        return newSize
     }
 }

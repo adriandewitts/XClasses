@@ -45,14 +45,15 @@ class XUIViewController: UIViewController, ViewModelManagerDelegate
 {
     var viewModel = ViewModel() as ViewModelDelegate
     
-    override init(nibName: String?, bundle: Bundle?)
-    {
-        viewModel = pullViewModel(viewModel: viewModel)
-        super.init(nibName: nibName, bundle: bundle)
-    }
+//    override init(nibName: String?, bundle: Bundle?)
+//    {
+//        viewModel = pullViewModel(viewModel: viewModel)
+//        super.init(nibName: nibName, bundle: bundle)
+//    }
 
     required init?(coder aDecoder: NSCoder)
     {
+        viewModel = pullViewModel(viewModel: viewModel)
         super.init(coder: aDecoder)
     }
 }

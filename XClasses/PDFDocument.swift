@@ -16,36 +16,47 @@ class PDFDocument
     init(path: String)
     {
         pdfDocument = CGPDFDocument(path.toURL() as CFURL)
+        cachedImages.countLimit = 5
     }
 
-    func cachePages(index: Int, rect: CGRect)
+    func cachePages(index: Int)
     {
-        // Fan out the caching from the page to be cached
-        cachePage(index: index, rect: rect)
-        cachePage(index: index + 1, rect: rect)
-        cachePage(index: index - 1, rect: rect)
-        cachePage(index: index + 2, rect: rect)
-        cachePage(index: index - 2, rect: rect)
+        cachePage(index: index)
+        // TODO: Thread page before and after
+//        cachePage(index: index + 1)
+//        cachePage(index: index - 1)
     }
 
-    func cachePage(index: Int, rect: CGRect)
+    func cachePage(index: Int)
     {
-        // put in threading here
         if index >= 0 || index < pdfDocument!.numberOfPages
         {
             let n = NSNumber(value: index)
             if cachedImages.object(forKey: n) == nil
             {
-                if let uiImage = pdfDocument!.uiImageFromPDFPage(pageNumber: index + 1, rect: rect)
+                // Gets the longest length of the screen and uses that for the width of the PDF
+                let screenSize = UIScreen.main.bounds
+                let maxLength = max(screenSize.width, screenSize.height)
+                let minLength = min(screenSize.width, screenSize.height)
+                let size = CGSize(width: maxLength, height: minLength)
+
+                if let uiImage = pdfDocument!.uiImageFromPDFPage(pageNumber: index + 1, size: size)
                 {
                     cachedImages.setObject(uiImage, forKey: n)
+                    print("cache: \(index)")
                 }
             }
         }
     }
 
-    func pdfPageImage(at index: Int) -> UIImage?
+//    func resetCache()
+//    {
+//        cachedImages.removeAllObjects()
+//    }
+
+    func pdfPageImage(at index: Int, size: CGSize) -> UIImage?
     {
+        cachePage(index: index)
         return self.cachedImages.object(forKey: NSNumber(value: index))
     }
 }

@@ -13,7 +13,6 @@ class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSourc
     var viewModel = ViewModel() as ViewModelDelegate
     var viewModelCollection = [ViewModel() as ViewModelDelegate]
     var controllerCollection: [UIViewController] = []
-    var currentPageControllerIndex = 0
     var pageControllerStoryBoardID = "ScrollImageViewID"
 
     override func viewDidLoad()
@@ -36,23 +35,17 @@ class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSourc
         let controller = [controllerCollection[0]]
         setViewControllers(controller, direction: .forward, animated: true, completion: nil)
 
-        //hideNavigationBar()
-
-        self.view.backgroundColor = UIColor.yellow
-    }
-
-    func hideNavigationBar()
-    {
-        navigationController?.setNavigationBarHidden(true, animated: true)
+        //navigationController?.setNavigationBarHidden(true, animated: true)
+        //self.view.backgroundColor = UIColor.yellow
     }
 
     func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController?
     {
-        if (currentPageControllerIndex + 1) < controllerCollection.count
+        let index = controllerCollection.index(of: viewController)! + 1
+
+        if index < controllerCollection.count
         {
-            currentPageControllerIndex += 1
-            let controller = controllerCollection[currentPageControllerIndex]
-            return controller
+            return controllerCollection[index]
         }
 
         return nil
@@ -60,11 +53,11 @@ class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSourc
 
     func pageViewController(_ pageViewController: UIPageViewController, viewControllerBefore viewController: UIViewController) -> UIViewController?
     {
-        if (currentPageControllerIndex - 1) > 0
+        let index = controllerCollection.index(of: viewController)! - 1
+
+        if index >= 0
         {
-            currentPageControllerIndex -= 1
-            let controller = controllerCollection[currentPageControllerIndex]
-            return controller
+            return controllerCollection[index]
         }
 
         return nil
