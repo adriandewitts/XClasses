@@ -8,7 +8,7 @@
 
 import UIKit
 
-class PDFPageViewController: UIScrollImageViewController//, PDFPageViewDelegate
+class PDFPageViewController: UIScrollImageViewController
 {
     override func viewDidLoad()
     {

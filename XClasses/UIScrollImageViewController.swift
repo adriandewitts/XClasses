@@ -50,7 +50,10 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
             }
         }
 
-        navigationController?.setNavigationBarHidden(true, animated: true)
+        if UIScreen.main.traitCollection.userInterfaceIdiom == .phone
+        {
+            navigationController?.setNavigationBarHidden(true, animated: true)
+        }
     }
 
     override func viewDidLayoutSubviews()
