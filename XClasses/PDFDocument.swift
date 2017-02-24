@@ -8,6 +8,18 @@
 
 import UIKit
 
+protocol PDFDocumentDelegate
+{
+    func pdfDocument() -> PDFDocument
+    func startIndex() -> Int
+}
+
+protocol PDFPageDelegate
+{
+    func pdfDocument() -> PDFDocument
+    func index() -> Int
+}
+
 class PDFDocument
 {
     let cachedImages = NSCache<NSNumber, UIImage>()
@@ -16,15 +28,20 @@ class PDFDocument
     init(path: String)
     {
         pdfDocument = CGPDFDocument(path.toURL() as CFURL)
-        cachedImages.countLimit = 5
+        cachedImages.countLimit = 7
     }
 
     func cachePages(index: Int)
     {
         cachePage(index: index)
-        // TODO: Thread page before and after
-//        cachePage(index: index + 1)
-//        cachePage(index: index - 1)
+        
+        let queue = DispatchQueue(label: "pdfer")
+
+        queue.async
+        {
+            self.cachePage(index: index + 1)
+            self.cachePage(index: index - 1)
+        }
     }
 
     func cachePage(index: Int)
@@ -56,7 +73,7 @@ class PDFDocument
 
     func pdfPageImage(at index: Int, size: CGSize) -> UIImage?
     {
-        cachePage(index: index)
+        cachePages(index: index)
         return self.cachedImages.object(forKey: NSNumber(value: index))
     }
 }

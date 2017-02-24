@@ -81,22 +81,27 @@ extension CGPDFDocument
 
 extension CGSize
 {
-    func proportionalSizing(to size: CGSize, aspectFill: Bool = true) -> CGSize
+    func proportionalSizing(to size: CGSize, contentMode: UIViewContentMode) -> CGSize
     {
-        let widthRatio = size.width / self.width
-        let heightRatio = size.height / self.height
-        var scale: CGFloat = 1.0
+        let width = Double(self.width)
+        let height = Double(self.height)
+        let widthRatio = Double(size.width) / width
+        let heightRatio = Double(size.height) / height
+        var scale: Double = 1.0
 
-        if aspectFill
+        switch contentMode
         {
-            scale = CGFloat(max(widthRatio, heightRatio))
-        }
-        else
-        {
-            scale = CGFloat(min(widthRatio, heightRatio))
+        case .scaleAspectFit:
+            scale = min(widthRatio, heightRatio)
+        case .scaleAspectFill:
+            scale = max(widthRatio, heightRatio)
+        case .top:
+            scale = widthRatio
+        default:
+            scale = min(widthRatio, heightRatio)
         }
 
-        let newSize = CGSize(width: scale * self.width, height: scale * self.height)
+        let newSize = CGSize(width: scale * width, height: scale * height)
         return newSize
     }
 }

@@ -32,10 +32,13 @@ class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSourc
             controllerCollection.append(pc as! UIViewController)
         }
 
-        let controller = [controllerCollection[0]]
+        var index = 0
+        if let indexAsString = viewModel.properties()["index"]
+        {
+            index = Int(indexAsString)!
+        }
+        let controller = [controllerCollection[index]]
         setViewControllers(controller, direction: .forward, animated: true, completion: nil)
-
-        //self.view.backgroundColor = UIColor.yellow
     }
 
     func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController?

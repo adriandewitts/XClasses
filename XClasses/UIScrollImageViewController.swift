@@ -69,19 +69,22 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
     {
         if let image = image
         {
-            imageView.frame.size = image.size.proportionalSizing(to: size, aspectFill: scrollView.contentMode == .scaleAspectFill)
+            imageView.frame.size = image.size.proportionalSizing(to: size, contentMode: scrollView.contentMode)
         }
 
         let widthRatio = CGFloat(size.width / imageView.frame.size.width)
         let heightRatio = CGFloat(size.height / imageView.frame.size.height)
         var zoom: CGFloat = 0.0
 
-        if scrollView.contentMode == .scaleAspectFill
+        switch scrollView.contentMode
         {
+        case .scaleAspectFit:
+            zoom = min(widthRatio, heightRatio)
+        case .scaleAspectFill:
             zoom = max(widthRatio, heightRatio)
-        }
-        else
-        {
+        case .top:
+            zoom = widthRatio
+        default:
             zoom = min(widthRatio, heightRatio)
         }
 
