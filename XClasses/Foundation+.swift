@@ -28,18 +28,25 @@ extension String
         {
             return "file://\(self)"
         }
+
         if self.hasPrefix("http://")
         {
             return self
         }
 
-        if let URLString = Bundle.main.path(forResource: self, ofType: nil)
+        if let urlString = Bundle.main.path(forResource: self, ofType: nil)
         {
-            let escaped = URLString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+            let escaped = urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
             return "file://\(escaped)"
         }
 
-        return "file://\(Bundle.main.path(forResource: "default", ofType: "png")!)"
+        if let urlString = Bundle.main.path(forResource: "default", ofType: "png")
+        {
+            let escaped = urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+            return "file://\(escaped)"
+        }
+
+        return "file://"
     }
 
     func toURL() -> URL

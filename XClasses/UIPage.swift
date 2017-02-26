@@ -27,7 +27,7 @@ class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSourc
 
         for vm in viewModelCollection
         {
-            var pc = UIStoryboard(name: "Main", bundle: nil).instantiateViewController(withIdentifier: pageControllerStoryBoardID) as! ViewModelManagerDelegate
+            var pc = storyboard!.instantiateViewController(withIdentifier: pageControllerStoryBoardID) as! ViewModelManagerDelegate
             pc.viewModel = vm
             controllerCollection.append(pc as! UIViewController)
         }

@@ -21,6 +21,11 @@ class XUITableViewController: UITableViewController, ViewModelManagerDelegate
         viewModel = pullViewModel(viewModel: viewModel)
         viewModelCollection = viewModel.relatedCollection()
         self.clearsSelectionOnViewWillAppear = false
+        let vmTitle = viewModel.properties()["title"]
+        if vmTitle != "Placeholder"
+        {
+            self.title = vmTitle
+        }
     }
 
     override func didReceiveMemoryWarning()
@@ -81,13 +86,19 @@ class XUITableViewCell: UITableViewCell, ViewModelManagerDelegate
 
         if let imagePath = properties["image"]
         {
-            thumb.contentMode = UIViewContentMode.scaleAspectFit
-            Nuke.loadImage(with: imagePath.toURL(), into: thumb)
+            if thumb != nil
+            {
+                thumb.contentMode = UIViewContentMode.scaleAspectFit
+                Nuke.loadImage(with: imagePath.toURL(), into: thumb)
+            }
         }
 
         if let titleLabel = properties["title"]
         {
-            title.text = titleLabel
+            if title != nil
+            {
+                title.text = titleLabel
+            }
         }
     }
 }
