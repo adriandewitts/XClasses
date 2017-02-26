@@ -82,4 +82,11 @@ class XSplitViewController: UISplitViewController, UISplitViewControllerDelegate
     }
 }
 
-
+extension UISplitViewController
+{
+    func toggleMasterView()
+    {
+        let button = self.displayModeButtonItem
+        let _ = button.target?.perform(button.action, with: button)
+    }
+}
