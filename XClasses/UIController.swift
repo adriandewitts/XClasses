@@ -26,6 +26,7 @@ class XUIFlowController: ViewModelManagerDelegate
 {
     static let sharedInstance = XUIFlowController()
     var viewModel = ViewModel() as ViewModelDelegate
+    var meta = [String:String]()
 }
 
 func pullViewModel(viewModel: ViewModelDelegate) -> ViewModelDelegate
