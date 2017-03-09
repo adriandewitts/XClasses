@@ -15,6 +15,7 @@ class PDFPageViewController: UIScrollImageViewController
         if let page = viewModel as? PDFPageDelegate
         {
             self.image = page.pdfDocument().pdfPageImage(at: page.index(), size: self.view.bounds.size)
+            makeAccessible()
         }
 
         super.viewDidLoad()
@@ -25,9 +26,17 @@ class PDFPageViewController: UIScrollImageViewController
         if let page = viewModel as? PDFPageDelegate
         {
             self.image = page.pdfDocument().pdfPageImage(at: page.index(), size: size)
+            makeAccessible()
         }
-        
+
         super.viewWillTransition(to: size, with: coordinator)
+    }
+
+    func makeAccessible()
+    {
+        self.imageView.isAccessibilityElement = true
+        self.imageView.accessibilityTraits = UIAccessibilityTraitStaticText
+        self.imageView.accessibilityLabel = viewModel.properties()["text"]
     }
 
 //    override func didReceiveMemoryWarning() {
