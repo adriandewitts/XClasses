@@ -67,9 +67,11 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
 
     func fitView(size: CGSize)
     {
+        scrollView.zoomScale = 1.0
         if let image = image
         {
-            imageView.frame.size = image.size.proportionalSizing(to: size, contentMode: scrollView.contentMode)
+            let proportionalSize =  image.size.proportionalSizing(to: size, contentMode: scrollView.contentMode)
+            imageView.frame = CGRect(origin: CGPoint.zero, size: proportionalSize)
         }
 
         let widthRatio = CGFloat(size.width / imageView.frame.size.width)

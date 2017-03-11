@@ -28,7 +28,7 @@ class PDFDocument
     init(path: String)
     {
         pdfDocument = CGPDFDocument(path.toURL() as CFURL)
-        cachedImages.countLimit = 7
+        cachedImages.countLimit = 5
     }
 
     func cachePages(index: Int)
@@ -66,10 +66,10 @@ class PDFDocument
         }
     }
 
-//    func resetCache()
-//    {
-//        cachedImages.removeAllObjects()
-//    }
+    func resetCache()
+    {
+        cachedImages.removeAllObjects()
+    }
 
     func pdfPageImage(at index: Int, size: CGSize) -> UIImage?
     {

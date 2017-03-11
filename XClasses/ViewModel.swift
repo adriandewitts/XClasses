@@ -11,6 +11,7 @@ import RealmSwift
 
 protocol ViewModelDelegate
 {
+    var _index: Int { get set }
     func properties() -> [String: String]
     func relatedCollection() -> [ViewModelDelegate]
 }
@@ -22,6 +23,8 @@ class RealmString: Object
 
 public class ViewModel: Object, ViewModelDelegate
 {
+    var _index: Int = 0
+
     dynamic var id = UUID().uuidString
     dynamic var createdAt = NSDate()
     dynamic var updatedAt = NSDate()
@@ -40,5 +43,10 @@ public class ViewModel: Object, ViewModelDelegate
     func relatedCollection() -> [ViewModelDelegate]
     {
         return [ViewModel()]
+    }
+
+    override public static func ignoredProperties() -> [String]
+    {
+        return ["_index"]
     }
 }
