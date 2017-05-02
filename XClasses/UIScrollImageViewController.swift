@@ -1,9 +1,8 @@
 //
 //  UIScroll+ImageView.swift
-//  Beachcomber
 //
 //  Created by Adrian on 17/2/17.
-//  Copyright © 2017 NACC. All rights reserved.
+//  Copyright © 2017 Adrian DeWitts. All rights reserved.
 //
 
 import UIKit

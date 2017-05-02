@@ -1,9 +1,9 @@
 //
 //  PDFView.swift
-//  Beachcomber
+//  
 //
 //  Created by Adrian on 3/12/16.
-//  Copyright © 2016 NACC. All rights reserved.
+//  Copyright © 2016 Adrian DeWitts. All rights reserved.
 //
 
 import UIKit

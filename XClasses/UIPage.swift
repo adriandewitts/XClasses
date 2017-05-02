@@ -1,9 +1,9 @@
 //
 //  UIPageViewController.swift
-//  Beachcomber
+//  
 //
 //  Created by Adrian on 26/11/16.
-//  Copyright © 2016 NACC. All rights reserved.
+//  Copyright © 2016 Adrian DeWitts. All rights reserved.
 //
 
 import UIKit

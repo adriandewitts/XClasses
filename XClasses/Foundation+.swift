@@ -8,6 +8,30 @@
 
 import Foundation
 
+extension String
+{
+    func snakeCase() -> String
+    {
+        let pattern = "([a-z0-9])([A-Z])"
+
+        let regex = try? NSRegularExpression(pattern: pattern, options: [])
+        let range = NSRange(location: 0, length: self.characters.count)
+        return (regex?.stringByReplacingMatches(in: self, options: [], range: range, withTemplate: "$1_$2").lowercased())!
+    }
+
+    func camelCase() -> String
+    {
+        let items = self.components(separatedBy: "_")
+        var camelCase = ""
+
+        items.enumerated().forEach
+        {
+            camelCase += 0 == $0 ? $1 : $1.capitalized
+        }
+        return camelCase
+    }
+}
+
 extension Bundle
 {
     class func contents(fileName: String) -> String?

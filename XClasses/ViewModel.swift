@@ -21,19 +21,28 @@ class RealmString: Object
     dynamic var stringValue = ""
 }
 
+enum SyncStatus: Int
+{
+    case current
+    case created
+    case updated
+    case deleted
+}
+
 public class ViewModel: Object, ViewModelDelegate
 {
-    var _index: Int = 0
+    var _index: Int = 0 // Position on current list in memory
+    dynamic var _sync = SyncStatus.current.rawValue // Record status for syncing
 
-    dynamic var id = UUID().uuidString
-    dynamic var createdAt = NSDate()
-    dynamic var updatedAt = NSDate()
-    dynamic var deletedAt = NSDate()
+    dynamic var id = 0 // Server ID
+    dynamic var updatedAt = Date()
+
+    // Mark: These are for overriding
     
-    override public static func primaryKey() -> String?
-    {
-        return "id"
-    }
+//    override public static func primaryKey() -> String?
+//    {
+//        return "_id"
+//    }
 
     func properties() -> [String: String]
     {
@@ -48,5 +57,41 @@ public class ViewModel: Object, ViewModelDelegate
     override public static func ignoredProperties() -> [String]
     {
         return ["_index"]
+    }
+
+    // End of overrides
+
+    func syncProperties() -> [String: String]
+    {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd' 'HH:mm:ss'.'SSS"
+        formatter.timeZone = TimeZone(abbreviation: "UTC")
+
+        var properties = [String: String]()
+        let schemaProperties = self.objectSchema.properties
+
+        for property in schemaProperties
+        {
+            if !property.name.hasPrefix("_")
+            {
+                let value = self.value(forKey: property.name)
+                let name = property.name.snakeCase()
+                if property.type != .date
+                {
+                    properties[name] = String(describing: value!)
+                }
+                else
+                {
+                    properties[name] = formatter.string(from: value as! Date)
+                }
+            }
+        }
+
+        if self.id == 0
+        {
+            properties["id"] = ""
+        }
+
+        return properties
     }
 }
