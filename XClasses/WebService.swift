@@ -90,7 +90,12 @@ struct PipeEncoding: ParameterEncoding
         var urlRequest = try urlRequest.asURLRequest()
         guard var parameters = parameters else { return urlRequest }
         let records = parameters.removeValue(forKey: "records") as! Array<ViewModel>
+
+        // Change to a GET temporarily and then change back to get the URL encoded
+        let temp = urlRequest.httpMethod
+        urlRequest.httpMethod = "GET"
         urlRequest = try URLEncoding.default.encode(urlRequest, with: parameters)
+        urlRequest.httpMethod = temp
 
         var lines = [String]()
         let propertyNames = records[0].syncProperties().keys

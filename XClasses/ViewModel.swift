@@ -12,8 +12,13 @@ import RealmSwift
 protocol ViewModelDelegate
 {
     var _index: Int { get set }
+    static func table() -> String
+    static func tableVersion() -> Float
+    static func tableView() -> String
+    static func readOnly() -> Bool
     func properties() -> [String: String]
     func relatedCollection() -> [ViewModelDelegate]
+    func syncProperties() -> [String: String]
 }
 
 class RealmString: Object
@@ -32,17 +37,41 @@ enum SyncStatus: Int
 public class ViewModel: Object, ViewModelDelegate
 {
     var _index: Int = 0 // Position on current list in memory
-    dynamic var _sync = SyncStatus.current.rawValue // Record status for syncing
-
-    dynamic var id = 0 // Server ID
-    dynamic var updatedAt = Date()
+    dynamic var _sync = SyncStatus.created.rawValue // Record status for syncing
+    dynamic var id = 0 // Server ID - do not make primary key, as it gets locked
+    dynamic var clientId = UUID().uuidString // Used to make sure records arent saved to the server DB multiple times
 
     // Mark: These are for overriding
-    
-//    override public static func primaryKey() -> String?
-//    {
-//        return "_id"
-//    }
+
+    override public static func primaryKey() -> String?
+    {
+        return "clientId"
+    }
+
+    override public static func indexedProperties() -> [String]
+    {
+        return ["_sync"]
+    }
+
+    static func table() -> String
+    {
+        return String(describing: self)
+    }
+
+    static func tableVersion() -> Float
+    {
+        return 1.0
+    }
+
+    static func tableView() -> String
+    {
+        return "default"
+    }
+
+    static func readOnly() -> Bool
+    {
+        return false
+    }
 
     func properties() -> [String: String]
     {
