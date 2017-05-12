@@ -98,12 +98,12 @@ struct PipeEncoding: ParameterEncoding
         urlRequest.httpMethod = temp
 
         var lines = [String]()
-        let propertyNames = records[0].syncProperties().keys
+        let propertyNames = records[0].exportProperties().keys
         lines.append(propertyNames.joined(separator: "|"))
 
         for record in records
         {
-            let properties = record.syncProperties()
+            let properties = record.exportProperties()
             var elements = [String]()
             for propertyName in propertyNames
             {
@@ -124,9 +124,9 @@ struct PipeEncoding: ParameterEncoding
             urlRequest.setValue("application/pipe", forHTTPHeaderField: "Content-Type")
         }
 
-        print("*******************")
-        print(urlRequest)
-        print(lines.joined(separator: "\n"))
+//        print("*******************")
+//        print(urlRequest)
+//        print(lines.joined(separator: "\n"))
 
         return urlRequest
     }

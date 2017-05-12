@@ -32,6 +32,25 @@ extension String
     }
 }
 
+extension Date
+{
+    func toUTCString() -> String
+    {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd' 'HH:mm:ss'.'SSS"
+        formatter.timeZone = TimeZone(abbreviation: "UTC")
+        return formatter.string(from: self)
+    }
+
+    static func from(UTCString: String) -> Date?
+    {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd' 'HH:mm:ss'.'SSS"
+        formatter.timeZone = TimeZone(abbreviation: "UTC")
+        return formatter.date(from: UTCString)
+    }
+}
+
 extension Bundle
 {
     class func contents(fileName: String) -> String?

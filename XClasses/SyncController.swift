@@ -37,16 +37,10 @@ public class SyncController
         for m in models
         {
             let model = "\(m)"
-            var syncModel: SyncModel
 
-            if let result = realm.objects(SyncModel.self).filter("modelName = '\(model)'").first
+            if realm.objects(SyncModel.self).filter("modelName = '\(model)'").count == 0
             {
-                syncModel = result
-            }
-            else
-            {
-                syncModel = SyncModel(value: ["modelName": model])
-                try! realm.write { realm.add(syncModel) }
+                try! realm.write { realm.add(SyncModel(value: ["modelName": model])) }
             }
         }
     }
@@ -65,30 +59,36 @@ public class SyncController
                 }
 
                 self.token = token!
-                self.sync(models: models, token: token!)
+                self.writeSync(models: models, token: token!)
             }
         }
         else
         {
-            self.sync(models: models, token: "")
+            self.readSync(models: models, token: "")
         }
     }
 
-    func sync(models: [AnyClass], token: String)
+    func writeSync(models: [AnyClass], token: String)
     {
         let realm = try! Realm()
         let provider = MoyaProvider<WebService>()
 
-        let a = Homophone(value: ["homophone": "there their they're", "_sync": SyncStatus.updated.rawValue])
-        let b = Homophone(value: ["homophone": "one two"])
-        try! realm.write { realm.add(a); realm.add(b) }
+        //let a = Homophone(value: ["homophone": "there their they're", "_sync": SyncStatus.updated.rawValue])
+        //let b = Homophone(value: ["homophone": "one two"])
+        //try! realm.write { realm.add(a); realm.add(b) }
+
+//        let a = Homophone()
+//        try! realm.write { a["homophone"] = "blah, blah, blah"; realm.add(a); }
+//
+//
+//        print(realm.objects(Homophone.self))
 
         for m in models
         {
             let modelClass = m as! ViewModel.Type
             let model = "\(m)"
             // Mark: This section handles the writes to server DB
-            // Check if class is read only, has a writelock (max 1minute), and has something to write
+            // Check if class is read only, has a writelock (max 1 minute), and has something to write
             if modelClass.readOnly() == false
             {
                 let minuteAgo = Date.init(timeIntervalSinceNow: -60.0)
@@ -114,13 +114,12 @@ public class SyncController
                                         for line in lines
                                         {
                                             let components = line.components(separatedBy: "|")
-                                            let id = components[0]
+                                            let id = Int(components[0])!
                                             let cid = components[1]
-                                            predicate = NSPredicate(format: "id = \(id) OR clientId = \(cid)")
+                                            predicate = NSPredicate(format: "id = \(id) OR clientId = '\(cid)'")
                                             let item = toSave.filter(predicate).first!
                                             try! realm.write {
-                                                item.id = Int(id)!
-                                                item.clientId = cid
+                                                item.id = id
                                                 item._sync = SyncStatus.current.rawValue
                                             }
                                         }
@@ -156,7 +155,7 @@ public class SyncController
                                     }
                                     else
                                     {
-                                        self.log(error: "Either was trying to delete records they can't or something went wrong with the server")
+                                        self.log(error: "Either user was trying to delete records they can't or something went wrong with the server")
                                     }
                                 case let .failure(error):
                                     self.log(error: "Server connectivity error\(error)")
@@ -169,21 +168,96 @@ public class SyncController
                     }
                 }
             }
+        }
+
+        print(Realm.Configuration.defaultConfiguration.fileURL ?? "No DB")
+    }
+
+    func readSync(models: [AnyClass], token: String)
+    {
+        let realm = try! Realm()
+        let provider = MoyaProvider<WebService>()
+
+        for m in models
+        {
+            let modelClass = m as! ViewModel.Type
+            let model = "\(m)"
 
             let minuteAgo = Date.init(timeIntervalSinceNow: -60.0)
-            let predicate = NSPredicate(format: "modelName = '\(model)' AND readLock < %@", minuteAgo as CVarArg)
+            var predicate = NSPredicate(format: "modelName = '\(model)' AND readLock < %@", minuteAgo as CVarArg)
             if let syncModel = realm.objects(SyncModel.self).filter(predicate).first
             {
+                var timestamp = Date.distantPast
                 try! realm.write { syncModel.readLock = Date() }
 
                 provider.request(.read(version: modelClass.tableVersion(), table: modelClass.table(), view: modelClass.tableView(), accessToken: token, lastTimestamp: syncModel.serverSync, predicate: nil))
                 { result in
+                    switch result {
+                    case let .success(moyaResponse):
+                        if moyaResponse.statusCode == 200
+                        {
+                            do
+                            {
+                                let response = try moyaResponse.mapString()
+                                let l = response.components(separatedBy: "\n")
+                                let meta = l[0].components(separatedBy: "|")
+                                timestamp = Date.from(UTCString: meta[1])!
+                                let h = l[1].components(separatedBy: "|")
+                                let header = h.map { $0.camelCase() }
+                                let lines = l.dropFirst(2)
+                                let idIndex = header.index(of: "id")!
+                                for line in lines
+                                {
+                                    let components = line.components(separatedBy: "|")
+                                    let id = components[idIndex]
+                                    predicate = NSPredicate(format: "id = \(id)")
 
+                                    var dict = [String: String]()
+                                    for (index, property) in header.enumerated()
+                                    {
+                                        dict[property] = components[index]
+                                    }
+
+                                    let records = realm.objects(modelClass).filter(predicate)
+                                    if (dict["delete"] == nil) || (dict["delete"] != "true")
+                                    {
+                                        if records.count > 0
+                                        {
+                                            records.first!.importProperties(dictionary: dict, isNew:false)
+                                        }
+                                        else
+                                        {
+                                            let record = modelClass.init()
+                                            record.importProperties(dictionary: dict, isNew: true)
+                                        }
+                                    }
+                                    else
+                                    {
+                                        try! realm.write {
+                                            realm.delete(records.first!)
+                                        }
+                                    }
+                                }
+                            }
+                            catch { self.log(error: "Response was impossibly incorrect") }
+                        }
+                        else
+                        {
+                            // TODO: if 403 show login modal
+                            self.log(error: "Server returned status code \(moyaResponse.statusCode)")
+                            Timer.scheduledTimer(withTimeInterval: 60.0, repeats: false, block: { timer in self.sync(models: models)})
+                        }
+                    case let .failure(error):
+                        self.log(error: "Server connectivity error\(error)")
+                        Timer.scheduledTimer(withTimeInterval: 60.0, repeats: false, block: { timer in self.sync(models: models)})
+                    }
                 }
 
-                try! realm.write { syncModel.readLock = Date.distantPast }
+                try! realm.write {
+                    syncModel.readLock = Date.distantPast
+                    syncModel.serverSync = timestamp
+                }
             }
-            // GET data on model - create, update, delete in local
         }
     }
 
@@ -200,7 +274,7 @@ public class SyncController
 
     func log(error: String)
     {
-        FIRAnalytics.logEvent(withName: "share_image", parameters: ["name": "Sync error" as NSObject, "error": error as NSObject])
+        FIRAnalytics.logEvent(withName: "iOS Error", parameters: ["name": "Sync error" as NSObject, "error": error as NSObject])
     }
 
     // TODO: will search on server and cache these queries in a different Realm DB
