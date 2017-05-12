@@ -13,13 +13,13 @@ import Moya
 
 protocol SyncControllerDelegate
 {
-    func belatedResponse(response: [ViewModel], error: String)
+    func belatedResponse(response: Results<Object>, error: String?)
 }
 
 public class SyncModel: Object
 {
     dynamic var modelName = ""
-    dynamic var serverSync: Date? = nil // Server timestamp of last server sync. To be used on next sync request
+    dynamic var serverSync = Date.distantPast // Server timestamp of last server sync. To be used on next sync request
     dynamic var readLock = Date.distantPast
     dynamic var writeLock = Date.distantPast
 }
@@ -27,8 +27,9 @@ public class SyncModel: Object
 public class SyncController
 {
     static let sharedInstance = SyncController()
-    var controllers = [String:String]()
-    var token = ""
+    static let serverTimeout = 60.0
+    //var controllers = [String:String]()
+    
 
     func configure(models: [AnyClass])
     {
@@ -58,13 +59,13 @@ public class SyncController
                     return
                 }
 
-                self.token = token!
                 self.writeSync(models: models, token: token!)
+                self.readSync(models: models, token: token!, completion: {})
             }
         }
         else
         {
-            self.readSync(models: models, token: "")
+            self.readSync(models: models, token: "", completion: {})
         }
     }
 
@@ -91,7 +92,7 @@ public class SyncController
             // Check if class is read only, has a writelock (max 1 minute), and has something to write
             if modelClass.readOnly() == false
             {
-                let minuteAgo = Date.init(timeIntervalSinceNow: -60.0)
+                let minuteAgo = Date.init(timeIntervalSinceNow: -SyncController.serverTimeout)
                 var predicate = NSPredicate(format: "modelName = '\(model)' AND writeLock < %@", minuteAgo as CVarArg)
                 if let syncModel = realm.objects(SyncModel.self).filter(predicate).first
                 {
@@ -130,11 +131,11 @@ public class SyncController
                                 {
                                     // TODO: if 403 show login modal
                                     self.log(error: "Server returned status code \(moyaResponse.statusCode)")
-                                    Timer.scheduledTimer(withTimeInterval: 60.0, repeats: false, block: { timer in self.sync(models: models)})
+                                    Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                                 }
                             case let .failure(error):
                                 self.log(error: "Server connectivity error\(error)")
-                                Timer.scheduledTimer(withTimeInterval: 60.0, repeats: false, block: { timer in self.sync(models: models)})
+                                Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                             }
 
                         }
@@ -159,7 +160,7 @@ public class SyncController
                                     }
                                 case let .failure(error):
                                     self.log(error: "Server connectivity error\(error)")
-                                    Timer.scheduledTimer(withTimeInterval: 60.0, repeats: false, block: { timer in self.sync(models: models)})
+                                    Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                                 }
                             }
                         }
@@ -173,7 +174,7 @@ public class SyncController
         print(Realm.Configuration.defaultConfiguration.fileURL ?? "No DB")
     }
 
-    func readSync(models: [AnyClass], token: String)
+    func readSync(models: [AnyClass], token: String, completion: () -> Void)
     {
         let realm = try! Realm()
         let provider = MoyaProvider<WebService>()
@@ -183,7 +184,7 @@ public class SyncController
             let modelClass = m as! ViewModel.Type
             let model = "\(m)"
 
-            let minuteAgo = Date.init(timeIntervalSinceNow: -60.0)
+            let minuteAgo = Date.init(timeIntervalSinceNow: -SyncController.serverTimeout)
             var predicate = NSPredicate(format: "modelName = '\(model)' AND readLock < %@", minuteAgo as CVarArg)
             if let syncModel = realm.objects(SyncModel.self).filter(predicate).first
             {
@@ -245,11 +246,11 @@ public class SyncController
                         {
                             // TODO: if 403 show login modal
                             self.log(error: "Server returned status code \(moyaResponse.statusCode)")
-                            Timer.scheduledTimer(withTimeInterval: 60.0, repeats: false, block: { timer in self.sync(models: models)})
+                            Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                         }
                     case let .failure(error):
                         self.log(error: "Server connectivity error\(error)")
-                        Timer.scheduledTimer(withTimeInterval: 60.0, repeats: false, block: { timer in self.sync(models: models)})
+                        Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                     }
                 }
 
@@ -261,15 +262,74 @@ public class SyncController
         }
     }
 
-    func query(model: AnyClass, query: NSPredicate, order: String, controller: SyncControllerDelegate, freshness: Int = 3600) -> ([ViewModel], String)
+    func query(model: AnyClass, query: NSPredicate, order: String, orderAscending: Bool, controller: SyncControllerDelegate, freshness: Double = 3600) -> (Results<Object>, String?)
     {
+        let realm = try! Realm()
+        let result = realm.objects(model as! Object.Type).filter(query).sorted(byKeyPath: order, ascending: orderAscending)
 
-        // Data is fresh - respond from DB (1 hour freshness max default)
-        // Data is not fresh - sync with server
-        // Data is empty - do not set 3 second timer
-        // Data sync has not resolved in 3 seconds, check for reachability
-        // if no reachability return list from DB and alert there is no reachability
-        return ([ViewModel()], "")
+        let predicate = NSPredicate(format: "modelName = '\(model)'")
+        if let syncModel = realm.objects(SyncModel.self).filter(predicate).first
+        {
+            // TODO: Is Fresh if push notifcations are on
+            let interval = syncModel.serverSync.timeIntervalSince(Date())
+            if interval < freshness
+            {
+                return (result, nil)
+            }
+            else
+            {
+                var timer: Timer?
+                if result.count > 0
+                {
+                    timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { timer in self.checkin(model: model, query: query, order: order, orderAscending: orderAscending, controller: controller)})
+                }
+
+                self.readSync(model: model, completion: {
+                    if let timer = timer
+                    {
+                        if timer.isValid { timer.invalidate() }
+                    }
+                    self.checkin(model: model, query: query, order: order, orderAscending: orderAscending, controller: controller)
+                })
+
+            }
+        }
+
+        return (result, "checkin")
+    }
+
+    func readSync(model: AnyClass, completion: @escaping () -> Void)
+    {
+        let user = FIRAuth.auth()?.currentUser
+        if let user = user
+        {
+            user.getTokenWithCompletion() {
+                token, error in
+                if error != nil { return }
+                self.readSync(models: [model], token: token!, completion: completion)
+            }
+        }
+        else { self.readSync(models: [model], token: "", completion: completion) }
+    }
+
+    func checkin(model: AnyClass, query: NSPredicate, order: String, orderAscending: Bool, controller: SyncControllerDelegate)
+    {
+        let realm = try! Realm()
+        let predicate = NSPredicate(format: "modelName = '\(model)'")
+        if let syncModel = realm.objects(SyncModel.self).filter(predicate).first
+        {
+            if syncModel.readLock.timeIntervalSince(Date()) < 3.0
+            {
+                // check for reachability, and then send below
+                let result = realm.objects(model as! Object.Type).filter(query).sorted(byKeyPath: order, ascending: orderAscending)
+                controller.belatedResponse(response: result, error: "Not reachable")
+            }
+            else
+            {
+                let result = realm.objects(model as! Object.Type).filter(query).sorted(byKeyPath: order, ascending: orderAscending)
+                controller.belatedResponse(response: result, error: nil)
+            }
+        }
     }
 
     func log(error: String)
@@ -290,7 +350,9 @@ public class SyncController
 // Config per model
 // Removal - periodically - when a certain age, only when deleted
 // File upload - immediately, triggered
-// Allowed last sync (Freshness) - 1 hour (periodic), has to be fresh
+
 
 // Sync tables: all, user_space.
 // Search - out of the userspace scope would user a different view server side, and a different DB (same model on the client side) -- use a different method
+
+

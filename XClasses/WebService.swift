@@ -12,7 +12,7 @@ import Alamofire
 
 enum WebService
 {
-    case read(version: Float, table: String, view: String, accessToken: String?, lastTimestamp: Date?, predicate: String?)
+    case read(version: Float, table: String, view: String, accessToken: String?, lastTimestamp: Date, predicate: String?)
     case createAndUpdate(version: Float, table: String, view: String, accessToken: String, records: [ViewModel])
     case delete(version: Float, table: String, view: String, accessToken: String, records: [ViewModel])
 }
@@ -49,7 +49,7 @@ extension WebService: TargetType
     {
         switch self
         {
-            case .read(_, _, _, let accessToken?, let lastTimestamp?, let predicate?):
+            case .read(_, _, _, let accessToken?, let lastTimestamp, let predicate?):
                 return ["access_token": accessToken, "last_timestamp": lastTimestamp, "predicate": predicate]
             case .createAndUpdate(_, _, _, let accessToken, let records), .delete(_, _, _, let accessToken, let records):
                 return ["access_token": accessToken, "records": records]
