@@ -35,12 +35,37 @@ enum SyncStatus: Int
     case deleted
 }
 
+// File/Server management
+// Static dictionary of file info struct
+// File info struct: Bucket, bucket path, folder path, expiry, metadata (Array of keys), record property for path of file (overrides folder path), delete on upload flag
+// Actions - get, put, cleanup
+// Library/Application support/ -> put files in here for audio storage with no backup flags
+
+struct FileModel
+{
+    let bucket: String
+    let bucketPath: String
+    let folderPath: String?
+    let expiry: Date
+    let metadataAttributes: Array<String>
+    let filePathAttribute: String?
+    let deleteOnUpload: Bool
+}
+
+enum FileAction: Int
+{
+    case none
+    case upload
+    case download
+}
+
 public class ViewModel: Object, ViewModelDelegate
 {
     var _index: Int = 0 // Position on current list in memory
     dynamic var _sync = SyncStatus.created.rawValue // Record status for syncing
     dynamic var id = 0 // Server ID - do not make primary key, as it gets locked
     dynamic var clientId = UUID().uuidString // Used to make sure records arent saved to the server DB multiple times
+
 
     // Mark: These are for overriding
 
@@ -74,6 +99,11 @@ public class ViewModel: Object, ViewModelDelegate
         return false
     }
 
+    class func fileAction() -> Int
+    {
+        return FileAction.none.rawValue
+    }
+
     func properties() -> [String: String]
     {
         return ["title": "Placeholder", "path": "/", "image": "default.png"]
@@ -91,6 +121,7 @@ public class ViewModel: Object, ViewModelDelegate
 
     // End of overrides
 
+    // Prepares the model for the CSV format
     func exportProperties() -> [String: String]
     {
         var properties = [String: String]()
@@ -122,6 +153,7 @@ public class ViewModel: Object, ViewModelDelegate
         return properties
     }
 
+    // Imports the data from the CSV and does the type casting that it needs to do
     func importProperties(dictionary: [String: String], isNew: Bool)
     {
         let schemaProperties = self.objectSchema.properties
@@ -158,3 +190,7 @@ public class ViewModel: Object, ViewModelDelegate
         }
     }
 }
+
+// Config per model
+// Removal - periodically - when a certain age, only when deleted
+// File upload - immediately, triggered

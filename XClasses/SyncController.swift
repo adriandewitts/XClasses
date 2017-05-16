@@ -74,16 +74,6 @@ public class SyncController
         let realm = try! Realm()
         let provider = MoyaProvider<WebService>()
 
-        //let a = Homophone(value: ["homophone": "there their they're", "_sync": SyncStatus.updated.rawValue])
-        //let b = Homophone(value: ["homophone": "one two"])
-        //try! realm.write { realm.add(a); realm.add(b) }
-
-//        let a = Homophone()
-//        try! realm.write { a["homophone"] = "blah, blah, blah"; realm.add(a); }
-//
-//
-//        print(realm.objects(Homophone.self))
-
         for m in models
         {
             let modelClass = m as! ViewModel.Type
@@ -279,6 +269,7 @@ public class SyncController
             else
             {
                 var timer: Timer?
+                // If there is already content, lets fix the time to max 3 seconds to find anything new. Otherwise wait until we do get something back.
                 if result.count > 0
                 {
                     timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { timer in self.checkin(model: model, query: query, order: order, orderAscending: orderAscending, controller: controller)})
@@ -318,17 +309,15 @@ public class SyncController
         let predicate = NSPredicate(format: "modelName = '\(model)'")
         if let syncModel = realm.objects(SyncModel.self).filter(predicate).first
         {
+            // If it is still waiting for the response, then dont wait any more and send back the results. 
+            var error: String?
             if syncModel.readLock.timeIntervalSince(Date()) < 3.0
             {
-                // check for reachability, and then send below
-                let result = realm.objects(model as! Object.Type).filter(query).sorted(byKeyPath: order, ascending: orderAscending)
-                controller.belatedResponse(response: result, error: "Not reachable")
+                error = "Not reachable" // Not connected at this time
             }
-            else
-            {
-                let result = realm.objects(model as! Object.Type).filter(query).sorted(byKeyPath: order, ascending: orderAscending)
-                controller.belatedResponse(response: result, error: nil)
-            }
+
+            let result = realm.objects(model as! Object.Type).filter(query).sorted(byKeyPath: order, ascending: orderAscending)
+            controller.belatedResponse(response: result, error: error)
         }
     }
 
@@ -341,18 +330,5 @@ public class SyncController
     // func directQuery(model: AnyClass, query: NSPredicate, order: String, controller: SyncControllerDelegate, freshness: Int = 3600) -> ([ViewModel], String)
     // 
 }
-
-
-
-// Sync manager request - is DB ready (updated in last 24 hours - set period)? yes respond immediately. no, if first time wait for response (also display error if no network, or there is a problem). no wait 3 second for response, then respond. if response earlier, display.
-// Sync manager (sync only) - first time/on app open, immediate change (silent push or record update on client from controller)
-//
-// Config per model
-// Removal - periodically - when a certain age, only when deleted
-// File upload - immediately, triggered
-
-
-// Sync tables: all, user_space.
-// Search - out of the userspace scope would user a different view server side, and a different DB (same model on the client side) -- use a different method
 
 

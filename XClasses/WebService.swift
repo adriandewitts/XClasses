@@ -124,10 +124,6 @@ struct PipeEncoding: ParameterEncoding
             urlRequest.setValue("application/pipe", forHTTPHeaderField: "Content-Type")
         }
 
-//        print("*******************")
-//        print(urlRequest)
-//        print(lines.joined(separator: "\n"))
-
         return urlRequest
     }
 }
