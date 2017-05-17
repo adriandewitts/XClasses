@@ -25,9 +25,9 @@ class PDFDocument
     let cachedImages = NSCache<NSNumber, UIImage>()
     let pdfDocument: CGPDFDocument?
 
-    init(path: String)
+    init(url: URL)
     {
-        pdfDocument = CGPDFDocument(path.toURL() as CFURL)
+        pdfDocument = CGPDFDocument(url as CFURL)
         cachedImages.countLimit = 5
     }
 

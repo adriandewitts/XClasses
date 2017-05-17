@@ -9,6 +9,8 @@
 import Foundation
 import RealmSwift
 import Firebase
+import FirebaseStorage
+import FileKit
 
 protocol ViewModelDelegate
 {
@@ -33,30 +35,16 @@ enum SyncStatus: Int
     case created
     case updated
     case deleted
+    case upload
+    case download
 }
-
-// File/Server management
-// Static dictionary of file info struct
-// File info struct: Bucket, bucket path, folder path, expiry, metadata (Array of keys), record property for path of file (overrides folder path), delete on upload flag
-// Actions - get, put, cleanup
-// Library/Application support/ -> put files in here for audio storage with no backup flags
 
 struct FileModel
 {
-    let bucket: String
-    let bucketPath: String
-    let folderPath: String?
-    let expiry: Date
-    let metadataAttributes: Array<String>
-    let filePathAttribute: String?
+    let serverURL: String
+    let localURL: String
+    let expiry: Int
     let deleteOnUpload: Bool
-}
-
-enum FileAction: Int
-{
-    case none
-    case upload
-    case download
 }
 
 public class ViewModel: Object, ViewModelDelegate
@@ -66,8 +54,7 @@ public class ViewModel: Object, ViewModelDelegate
     dynamic var id = 0 // Server ID - do not make primary key, as it gets locked
     dynamic var clientId = UUID().uuidString // Used to make sure records arent saved to the server DB multiple times
 
-
-    // Mark: These are for overriding
+    // Mark: Override in subclass
 
     override public static func primaryKey() -> String?
     {
@@ -99,11 +86,6 @@ public class ViewModel: Object, ViewModelDelegate
         return false
     }
 
-    class func fileAction() -> Int
-    {
-        return FileAction.none.rawValue
-    }
-
     func properties() -> [String: String]
     {
         return ["title": "Placeholder", "path": "/", "image": "default.png"]
@@ -119,9 +101,17 @@ public class ViewModel: Object, ViewModelDelegate
         return ["_index"]
     }
 
+    // serverURL: gs:// url on google cloud storage
+    // localURL: path to url on device - is parsed to include id or clientid
+    // expiry: when file is deleted locally
+    class func fileAttributes() -> [String: FileModel]
+    {
+        return ["default": FileModel(serverURL: "gs://bookbot-162503.appspot.com/koto.png", localURL: "/image.png", expiry: 3600, deleteOnUpload: true)]
+    }
+
     // End of overrides
 
-    // Prepares the model for the CSV format
+    // Prepares the model as a Dictionary, excluding prefixed underscored properties
     func exportProperties() -> [String: String]
     {
         var properties = [String: String]()
@@ -189,8 +179,98 @@ public class ViewModel: Object, ViewModelDelegate
             }
         }
     }
+
+    func getFile(controller: SyncControllerDelegate?, key: String = "default")
+    {
+        let fileAttributes = type(of: self).fileAttributes()[key]!
+        let localURL = URL(string: self.replaceOccurrence(of: fileAttributes.localURL))!
+        let serverURL = self.replaceOccurrence(of: fileAttributes.serverURL)
+        let storage = FIRStorage.storage()
+        let storageRef = storage.reference(forURL: serverURL)
+
+        _ = storageRef.write(toFile: localURL)
+        { url, error in
+            if let error = error
+            {
+                print(error)
+            }
+            else
+            {
+                if self._sync == SyncStatus.download.rawValue
+                {
+                    self._sync = SyncStatus.current.rawValue
+                }
+            }
+        }
+    }
+
+    func putFile(controller: SyncControllerDelegate?, key: String = "default")
+    {
+        let fileAttributes = type(of: self).fileAttributes()[key]!
+        let localURL = URL(string: self.replaceOccurrence(of: fileAttributes.localURL))!
+        let serverURL = self.replaceOccurrence(of: fileAttributes.serverURL)
+        let storage = FIRStorage.storage()
+        let storageRef = storage.reference(forURL: serverURL)
+        let metadata = FIRStorageMetadata()
+        metadata.customMetadata = self.exportProperties()
+
+        _ = storageRef.putFile(localURL, metadata: metadata)
+        { metadata, error in
+            if let error = error
+            {
+                print(error)
+            }
+            else
+            {
+                if self._sync == SyncStatus.upload.rawValue
+                {
+                    self._sync = SyncStatus.current.rawValue
+                }
+                if fileAttributes.deleteOnUpload
+                {
+                    try! FileManager.default.removeItem(at: localURL)
+                }
+                // Metadata contains file metadata such as size, content-type, and download URL.
+                //let downloadURL = metadata!.downloadURL()
+                // TODO: set file locations
+                // TODO: monitor uploads and downloads progress and send to delegate
+            }
+        }
+    }
+
+    private func replaceOccurrence(of: String) -> String
+    {
+        var replacement = of
+        let schemaProperties = self.objectSchema.properties
+        for property in schemaProperties
+        {
+            replacement = replacement.replacingOccurrences(of: "{\(property)}", with: String(describing: self[property.name]!))
+        }
+
+        return replacement.replacingOccurrences(of: "{uid}", with: SyncController.sharedInstance.uid)
+    }
+
+
+    func syncFiles()
+    {
+        if self._sync == SyncStatus.upload.rawValue
+        {
+            let keys = type(of: self).fileAttributes().keys
+            for key in keys
+            {
+                self.putFile(controller: nil, key: key)
+            }
+        }
+        else if self._sync == SyncStatus.download.rawValue
+        {
+            let keys = type(of: self).fileAttributes().keys
+            for key in keys
+            {
+                self.getFile(controller: nil, key: key)
+            }
+        }
+    }
 }
 
-// Config per model
-// Removal - periodically - when a certain age, only when deleted
-// File upload - immediately, triggered
+// TODO: Removal of record - periodically - when a certain age
+// TODO: File cleanup after certain age

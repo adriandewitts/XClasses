@@ -14,6 +14,7 @@ import Moya
 protocol SyncControllerDelegate
 {
     func belatedResponse(response: Results<Object>, error: String?)
+    //func tranferStatus(progress: Int, result: String?, error: String?)
 }
 
 public class SyncModel: Object
@@ -28,8 +29,7 @@ public class SyncController
 {
     static let sharedInstance = SyncController()
     static let serverTimeout = 60.0
-    //var controllers = [String:String]()
-    
+    var uid = ""
 
     func configure(models: [AnyClass])
     {
@@ -51,6 +51,7 @@ public class SyncController
         let user = FIRAuth.auth()?.currentUser
         if let user = user
         {
+            uid = user.uid
             user.getTokenWithCompletion() {
                 token, error in
                 if let error = error
@@ -160,8 +161,6 @@ public class SyncController
                 }
             }
         }
-
-        print(Realm.Configuration.defaultConfiguration.fileURL ?? "No DB")
     }
 
     func readSync(models: [AnyClass], token: String, completion: () -> Void)
@@ -294,6 +293,7 @@ public class SyncController
         let user = FIRAuth.auth()?.currentUser
         if let user = user
         {
+            uid = user.uid
             user.getTokenWithCompletion() {
                 token, error in
                 if error != nil { return }
@@ -309,7 +309,7 @@ public class SyncController
         let predicate = NSPredicate(format: "modelName = '\(model)'")
         if let syncModel = realm.objects(SyncModel.self).filter(predicate).first
         {
-            // If it is still waiting for the response, then dont wait any more and send back the results. 
+            // If it is still waiting for the response - dont wait any more and send back the results. 
             var error: String?
             if syncModel.readLock.timeIntervalSince(Date()) < 3.0
             {
@@ -323,7 +323,8 @@ public class SyncController
 
     func log(error: String)
     {
-        FIRAnalytics.logEvent(withName: "iOS Error", parameters: ["name": "Sync error" as NSObject, "error": error as NSObject])
+        //FIRAnalytics.logEvent(withName: "iOS Error", parameters: ["name": "Sync error" as NSObject, "error": error as NSObject])
+        print(error)
     }
 
     // TODO: will search on server and cache these queries in a different Realm DB

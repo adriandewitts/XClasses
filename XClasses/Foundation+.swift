@@ -51,42 +51,30 @@ extension Date
     }
 }
 
-extension Bundle
-{
-    class func contents(fileName: String) -> String?
-    {
-        do
-        {
-            return try String(contentsOfFile: Bundle.main.path(forResource: fileName, ofType: nil)!)
-        }
-        catch { return nil }
-    }
-}
-
 extension String
 {
     func toURLString() -> String
     {
         if self.hasPrefix("/")
         {
-            return "file://\(self)"
+            return "file://\(self.escape())"
         }
 
         if self.hasPrefix("http://")
         {
-            return self
+            return self.escape()
         }
 
         if let urlString = Bundle.main.path(forResource: self, ofType: nil)
         {
-            let escaped = urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
-            return "file://\(escaped)"
+            return "file://\(urlString.escape())"
         }
+
+        // TODO: Look for resource in user folder
 
         if let urlString = Bundle.main.path(forResource: "default", ofType: "png")
         {
-            let escaped = urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
-            return "file://\(escaped)"
+            return "file://\(urlString.escape())"
         }
 
         return "file://"
@@ -94,23 +82,12 @@ extension String
 
     func toURL() -> URL
     {
-        let escaped = self.toURLString()
-        return URL(string: escaped)!
+        return URL(string: self.toURLString())!
     }
 
-    func toContents() -> String
+    func escape() -> String
     {
-        // Will need to do checks and return nothing if needs be
-        return try! String(contentsOfFile: self.toURLString())
+        return self.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
     }
-
-//    func toData()
-//    {
-//        return try! Data(contentsOf: self.toURL())
-//    }
 }
 
-// String - file path, web url, file bundle
-// input: String, URL
-// output: String path, URL, string contents, data
-// string to string, string to URL, string to contents, string to data, url to contents, url to data

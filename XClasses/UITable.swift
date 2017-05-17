@@ -89,7 +89,7 @@ class XUITableViewCell: UITableViewCell, ViewModelManagerDelegate
             if thumb != nil
             {
                 thumb.contentMode = UIViewContentMode.scaleAspectFit
-                Nuke.loadImage(with: imagePath.toURL(), into: thumb)
+                //Nuke.loadImage(with: imagePath.toURL(), into: thumb)
             }
         }
 
