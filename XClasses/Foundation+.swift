@@ -55,34 +55,34 @@ extension String
 {
     func toURLString() -> String
     {
-        if self.hasPrefix("/")
-        {
-            return "file://\(self.escape())"
-        }
-
-        if self.hasPrefix("http://")
+        if self.hasPrefix("/") || self.hasPrefix("http://")
         {
             return self.escape()
         }
 
         if let urlString = Bundle.main.path(forResource: self, ofType: nil)
         {
-            return "file://\(urlString.escape())"
+            return urlString.escape()
         }
 
         // TODO: Look for resource in user folder
 
         if let urlString = Bundle.main.path(forResource: "default", ofType: "png")
         {
-            return "file://\(urlString.escape())"
+            return urlString.escape()
         }
 
-        return "file://"
+        return "/"
     }
 
     func toURL() -> URL
     {
-        return URL(string: self.toURLString())!
+        var urlString = self.toURLString()
+        if self.hasPrefix("/")
+        {
+            urlString = "file:/\(urlString)"
+        }
+        return URL(string: urlString)!
     }
 
     func escape() -> String

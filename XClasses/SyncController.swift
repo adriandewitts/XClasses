@@ -10,6 +10,7 @@ import Foundation
 import Firebase
 import RealmSwift
 import Moya
+import FileKit
 
 protocol SyncControllerDelegate
 {
@@ -46,13 +47,31 @@ public class SyncController
         }
     }
 
+    func configureFile(models: [AnyClass])
+    {
+        for m in models
+        {
+            let model = m as! ViewModel.Type
+            let paths = model.fileAttributes()
+            for p in paths
+            {
+                let path = Path(p.value.localURL).parent
+                if !path.exists
+                {
+                    try! path.createDirectory()
+                }
+            }
+
+        }
+    }
+
     func sync(models: [AnyClass])
     {
-        let user = FIRAuth.auth()?.currentUser
+        let user = Auth.auth().currentUser
         if let user = user
         {
             uid = user.uid
-            user.getTokenWithCompletion() {
+            user.getIDToken() {
                 token, error in
                 if let error = error
                 {
@@ -79,7 +98,7 @@ public class SyncController
         {
             let modelClass = m as! ViewModel.Type
             let model = "\(m)"
-            // Mark: This section handles the writes to server DB
+            // This section handles the writes to server DB
             // Check if class is read only, has a writelock (max 1 minute), and has something to write
             if modelClass.readOnly() == false
             {
@@ -290,11 +309,11 @@ public class SyncController
 
     func readSync(model: AnyClass, completion: @escaping () -> Void)
     {
-        let user = FIRAuth.auth()?.currentUser
+        let user = Auth.auth().currentUser
         if let user = user
         {
             uid = user.uid
-            user.getTokenWithCompletion() {
+            user.getIDToken() {
                 token, error in
                 if error != nil { return }
                 self.readSync(models: [model], token: token!, completion: completion)
@@ -318,6 +337,23 @@ public class SyncController
 
             let result = realm.objects(model as! Object.Type).filter(query).sorted(byKeyPath: order, ascending: orderAscending)
             controller.belatedResponse(response: result, error: error)
+        }
+    }
+
+    func fileSync(models: [AnyClass])
+    {
+        // TODO: Needs robust checking and status
+        // TODO: Limit downloads and uploads at the same time
+        let realm = try! Realm()
+        let predicate = NSPredicate(format: "_sync = \(SyncStatus.upload.rawValue) or _sync = \(SyncStatus.download.rawValue) ")
+
+        for model in models
+        {
+            let result = realm.objects(model as! Object.Type).filter(predicate)
+            for item in result
+            {
+                (item as! ViewModel).syncFiles()
+            }
         }
     }
 

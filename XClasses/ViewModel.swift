@@ -41,7 +41,8 @@ enum SyncStatus: Int
 
 struct FileModel
 {
-    let serverURL: String
+    let bucket: String
+    let serverPath: String
     let localURL: String
     let expiry: Int
     let deleteOnUpload: Bool
@@ -103,10 +104,11 @@ public class ViewModel: Object, ViewModelDelegate
 
     // serverURL: gs:// url on google cloud storage
     // localURL: path to url on device - is parsed to include id or clientid
-    // expiry: when file is deleted locally
+    // expiry: when file is deleted locally (in seconds)
+    // deleted on upload: as it says
     class func fileAttributes() -> [String: FileModel]
     {
-        return ["default": FileModel(serverURL: "gs://bookbot-162503.appspot.com/koto.png", localURL: "/image.png", expiry: 3600, deleteOnUpload: true)]
+        return ["default": FileModel(bucket: "gs://default/", serverPath: "{clientID}.png", localURL: "/{clientID}.png", expiry: 3600, deleteOnUpload: true)]
     }
 
     // End of overrides
@@ -168,7 +170,7 @@ public class ViewModel: Object, ViewModelDelegate
                     case .date:
                         self[property.name] = Date.from(UTCString: dictionary[property.name]!)
                     default:
-                        FIRAnalytics.logEvent(withName: "iOS Error", parameters: ["error": "Property type does not exist" as NSObject])
+                        Analytics.logEvent("iOS Error", parameters: ["error": "Property type does not exist" as NSObject])
                     }
                 }
             }
@@ -180,13 +182,25 @@ public class ViewModel: Object, ViewModelDelegate
         }
     }
 
+    func fileURL(forKey: String = "default") -> (URL, Bool)
+    {
+        let path = self.path(forKey: forKey)
+        return (path.url, path.exists)
+    }
+
+    func path(forKey: String = "default") -> Path
+    {
+        let fileAttributes = type(of: self).fileAttributes()[forKey]!
+        return Path(self.replaceOccurrence(of: fileAttributes.localURL))
+    }
+
     func getFile(controller: SyncControllerDelegate?, key: String = "default")
     {
         let fileAttributes = type(of: self).fileAttributes()[key]!
         let localURL = URL(string: self.replaceOccurrence(of: fileAttributes.localURL))!
-        let serverURL = self.replaceOccurrence(of: fileAttributes.serverURL)
-        let storage = FIRStorage.storage()
-        let storageRef = storage.reference(forURL: serverURL)
+        let serverPath = self.replaceOccurrence(of: fileAttributes.serverPath)
+        let storage = Storage.storage(url: fileAttributes.bucket)
+        let storageRef = storage.reference(forURL: fileAttributes.bucket + serverPath)
 
         _ = storageRef.write(toFile: localURL)
         { url, error in
@@ -198,7 +212,10 @@ public class ViewModel: Object, ViewModelDelegate
             {
                 if self._sync == SyncStatus.download.rawValue
                 {
-                    self._sync = SyncStatus.current.rawValue
+                    let realm = try! Realm()
+                    try! realm.write {
+                        self._sync = SyncStatus.current.rawValue
+                    }
                 }
             }
         }
@@ -207,14 +224,15 @@ public class ViewModel: Object, ViewModelDelegate
     func putFile(controller: SyncControllerDelegate?, key: String = "default")
     {
         let fileAttributes = type(of: self).fileAttributes()[key]!
-        let localURL = URL(string: self.replaceOccurrence(of: fileAttributes.localURL))!
-        let serverURL = self.replaceOccurrence(of: fileAttributes.serverURL)
-        let storage = FIRStorage.storage()
-        let storageRef = storage.reference(forURL: serverURL)
-        let metadata = FIRStorageMetadata()
+        let localURL = Path(self.replaceOccurrence(of: fileAttributes.localURL)).url
+        let serverPath = self.replaceOccurrence(of: fileAttributes.serverPath)
+
+        let storage = Storage.storage(url: fileAttributes.bucket)
+        let storageRef = storage.reference(forURL: fileAttributes.bucket + serverPath)
+        let metadata = StorageMetadata()
         metadata.customMetadata = self.exportProperties()
 
-        _ = storageRef.putFile(localURL, metadata: metadata)
+        _ = storageRef.putFile(from: localURL, metadata: metadata)
         { metadata, error in
             if let error = error
             {
@@ -224,7 +242,10 @@ public class ViewModel: Object, ViewModelDelegate
             {
                 if self._sync == SyncStatus.upload.rawValue
                 {
-                    self._sync = SyncStatus.current.rawValue
+                    let realm = try! Realm()
+                    try! realm.write {
+                        self._sync = SyncStatus.current.rawValue
+                    }
                 }
                 if fileAttributes.deleteOnUpload
                 {
@@ -244,7 +265,7 @@ public class ViewModel: Object, ViewModelDelegate
         let schemaProperties = self.objectSchema.properties
         for property in schemaProperties
         {
-            replacement = replacement.replacingOccurrences(of: "{\(property)}", with: String(describing: self[property.name]!))
+            replacement = replacement.replacingOccurrences(of: "{\(property.name)}", with: String(describing: self[property.name]!))
         }
 
         return replacement.replacingOccurrences(of: "{uid}", with: SyncController.sharedInstance.uid)
@@ -274,3 +295,7 @@ public class ViewModel: Object, ViewModelDelegate
 
 // TODO: Removal of record - periodically - when a certain age
 // TODO: File cleanup after certain age
+
+// File jobs
+// model, clientID, progress, lastProgressTime
+// status: toTransfer, transferring, transferred, pause?
