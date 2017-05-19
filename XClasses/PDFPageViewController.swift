@@ -36,7 +36,7 @@ class PDFPageViewController: UIScrollImageViewController
     {
         self.imageView.isAccessibilityElement = true
         self.imageView.accessibilityTraits = UIAccessibilityTraitStaticText
-        self.imageView.accessibilityLabel = viewModel.properties()["text"]
+        self.imageView.accessibilityLabel = viewModel.properties["text"]
     }
 
     override func didReceiveMemoryWarning()

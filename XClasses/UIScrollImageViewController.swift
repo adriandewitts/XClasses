@@ -41,7 +41,7 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
         }
         else
         {
-            let properties = viewModel.properties()
+            let properties = viewModel.properties
             if let imagePath = properties["image"]
             {
                 Nuke.loadImage(with: URL(string: imagePath)!, into: imageView)

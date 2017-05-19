@@ -52,7 +52,7 @@ public class SyncController
         for m in models
         {
             let model = m as! ViewModel.Type
-            let paths = model.fileAttributes()
+            let paths = model.fileAttributes
             for p in paths
             {
                 let path = Path(p.value.localURL).parent
@@ -101,7 +101,7 @@ public class SyncController
             let model = "\(m)"
             // This section handles the writes to server DB
             // Check if class is read only, has a writelock (max 1 minute), and has something to write
-            if modelClass.readOnly() == false
+            if modelClass.readOnly == false
             {
                 let minuteAgo = Date.init(timeIntervalSinceNow: -SyncController.serverTimeout)
                 var predicate = NSPredicate(format: "modelName = '\(model)' AND writeLock < %@", minuteAgo as CVarArg)
@@ -112,7 +112,7 @@ public class SyncController
                     let toSave = realm.objects(modelClass).filter(predicate)
                     if toSave.count > 0
                     {
-                        provider.request(.createAndUpdate(version: modelClass.tableVersion(), table: modelClass.table(), view: modelClass.tableView(), accessToken: token, records: Array(toSave)))
+                        provider.request(.createAndUpdate(version: modelClass.tableVersion, table: modelClass.table, view: modelClass.tableView, accessToken: token, records: Array(toSave)))
                         { result in
                             switch result {
                             case let .success(moyaResponse):
@@ -156,7 +156,7 @@ public class SyncController
                         let toDelete = realm.objects(modelClass).filter(predicate)
                         if toDelete.count > 0
                         {
-                            provider.request(.delete(version: modelClass.tableVersion(), table: modelClass.table(), view: modelClass.tableView(), accessToken: token, records: Array(toDelete)))
+                            provider.request(.delete(version: modelClass.tableVersion, table: modelClass.table, view: modelClass.tableView, accessToken: token, records: Array(toDelete)))
                             { result in
                                 switch result {
                                 case let .success(moyaResponse):
@@ -200,7 +200,7 @@ public class SyncController
                 var timestamp = Date.distantPast
                 try! realm.write { syncModel.readLock = Date() }
 
-                provider.request(.read(version: modelClass.tableVersion(), table: modelClass.table(), view: modelClass.tableView(), accessToken: token, lastTimestamp: syncModel.serverSync, predicate: nil))
+                provider.request(.read(version: modelClass.tableVersion, table: modelClass.table, view: modelClass.tableView, accessToken: token, lastTimestamp: syncModel.serverSync, predicate: nil))
                 { result in
                     switch result {
                     case let .success(moyaResponse):

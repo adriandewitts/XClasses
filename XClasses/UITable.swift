@@ -19,9 +19,9 @@ class XUITableViewController: UITableViewController, ViewModelManagerDelegate
     {
         super.viewDidLoad()
         viewModel = pullViewModel(viewModel: viewModel)
-        viewModelCollection = viewModel.relatedCollection()
+        viewModelCollection = viewModel.relatedCollection
         self.clearsSelectionOnViewWillAppear = false
-        let vmTitle = viewModel.properties()["title"]
+        let vmTitle = viewModel.properties["title"]
         if vmTitle != "Placeholder"
         {
             self.title = vmTitle
@@ -47,13 +47,13 @@ class XUITableViewController: UITableViewController, ViewModelManagerDelegate
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int
     {
-        return viewModelCollection[section].relatedCollection().count
+        return viewModelCollection[section].relatedCollection.count
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
     {
         let cell = tableView.dequeueReusableCell(withIdentifier: reuseIdentifier, for: indexPath) as! XUITableViewCell
-        cell.assignViewModelToView(viewModel: viewModelCollection[indexPath.section].relatedCollection()[indexPath.item])
+        cell.assignViewModelToView(viewModel: viewModelCollection[indexPath.section].relatedCollection[indexPath.item])
 
         return cell
     }
@@ -82,7 +82,7 @@ class XUITableViewCell: UITableViewCell, ViewModelManagerDelegate
     func assignViewModelToView(viewModel: ViewModelDelegate)
     {
         self.viewModel = viewModel
-        let properties = viewModel.properties()
+        let properties = viewModel.properties
 
         if let imagePath = properties["image"]
         {

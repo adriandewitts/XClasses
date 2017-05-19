@@ -22,10 +22,10 @@ class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSourc
         delegate = self
 
         viewModel = pullViewModel(viewModel: viewModel)
-        viewModelCollection = viewModel.relatedCollection()
+        viewModelCollection = viewModel.relatedCollection
 
         var index = 0
-        if let indexAsString = viewModel.properties()["index"]
+        if let indexAsString = viewModel.properties["index"]
         {
             index = Int(indexAsString)!
         }

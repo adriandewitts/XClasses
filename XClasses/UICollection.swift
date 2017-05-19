@@ -25,7 +25,7 @@ class XUICollectionViewController: UICollectionViewController, ViewModelManagerD
         super.viewDidLoad()
 
         viewModel = pullViewModel(viewModel: viewModel)
-        viewModelCollection = viewModel.relatedCollection()
+        viewModelCollection = viewModel.relatedCollection
 
         self.clearsSelectionOnViewWillAppear = false
     }
@@ -81,7 +81,7 @@ class XUICollectionViewCell: UICollectionViewCell, ViewModelManagerDelegate
     func assignViewModelToView(viewModel: ViewModelDelegate)
     {
         self.viewModel = viewModel
-        let properties = viewModel.properties()
+        let properties = viewModel.properties
         if let imagePath = properties["image"]
         {
             imageView.contentMode = UIViewContentMode.scaleAspectFit

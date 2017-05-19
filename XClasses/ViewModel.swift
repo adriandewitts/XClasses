@@ -15,13 +15,8 @@ import FileKit
 protocol ViewModelDelegate
 {
     var _index: Int { get set }
-    static func table() -> String
-    static func tableVersion() -> Float
-    static func tableView() -> String
-    static func readOnly() -> Bool
-    func properties() -> [String: String]
-    func relatedCollection() -> [ViewModelDelegate]
-    func exportProperties() -> [String: String]
+    var properties: [String: String]  { get }
+    var relatedCollection: [ViewModelDelegate] { get }
 }
 
 class RealmString: Object
@@ -55,58 +50,62 @@ public class ViewModel: Object, ViewModelDelegate
     dynamic var id = 0 // Server ID - do not make primary key, as it gets locked
     dynamic var clientId = UUID().uuidString // Used to make sure records arent saved to the server DB multiple times
 
+//    class var pp: String { get {
+//        return "clientId" }
+//    }
+
     // Mark: Override in subclass
 
-    override public static func primaryKey() -> String?
+    override public class func primaryKey() -> String?
     {
         return "clientId"
     }
 
-    override public static func indexedProperties() -> [String]
+    override public class func indexedProperties() -> [String]
     {
         return ["_sync", "id"]
     }
 
-    class func table() -> String
+    override public class func ignoredProperties() -> [String]
+    {
+        return ["_index"]
+    }
+
+    class var table: String
     {
         return String(describing: self)
     }
 
-    class func tableVersion() -> Float
+    class var tableVersion: Float
     {
         return 1.0
     }
 
-    class func tableView() -> String
+    class var tableView: String
     {
         return "default"
     }
 
-    class func readOnly() -> Bool
+    class var readOnly: Bool
     {
         return false
     }
 
-    func properties() -> [String: String]
+    var properties: [String: String]
     {
         return ["title": "Placeholder", "path": "/", "image": "default.png"]
     }
 
-    func relatedCollection() -> [ViewModelDelegate]
+    var relatedCollection: [ViewModelDelegate]
     {
         return [ViewModel()]
-    }
-
-    override public static func ignoredProperties() -> [String]
-    {
-        return ["_index"]
     }
 
     // serverURL: gs:// url on google cloud storage
     // localURL: path to url on device - is parsed to include id or clientid
     // expiry: when file is deleted locally (in seconds)
     // deleted on upload: as it says
-    class func fileAttributes() -> [String: FileModel]
+    class var fileAttributes: [String: FileModel]
     {
         return ["default": FileModel(bucket: "gs://default/", serverPath: "{clientID}.png", localURL: "/{clientID}.png", expiry: 3600, deleteOnUpload: true)]
     }
@@ -192,13 +191,13 @@ public class ViewModel: Object, ViewModelDelegate
 
     func path(forKey: String = "default") -> Path
     {
-        let fileAttributes = type(of: self).fileAttributes()[forKey]!
+        let fileAttributes = type(of: self).fileAttributes[forKey]!
         return Path(self.replaceOccurrence(of: fileAttributes.localURL))
     }
 
     func getFile(controller: SyncControllerDelegate?, key: String = "default")
     {
-        let fileAttributes = type(of: self).fileAttributes()[key]!
+        let fileAttributes = type(of: self).fileAttributes[key]!
         let localURL = Path(self.replaceOccurrence(of: fileAttributes.localURL)).url
         let serverPath = self.replaceOccurrence(of: fileAttributes.serverPath)
 
@@ -226,7 +225,7 @@ public class ViewModel: Object, ViewModelDelegate
 
     func putFile(controller: SyncControllerDelegate?, key: String = "default")
     {
-        let fileAttributes = type(of: self).fileAttributes()[key]!
+        let fileAttributes = type(of: self).fileAttributes[key]!
         let localURL = Path(self.replaceOccurrence(of: fileAttributes.localURL)).url
         let serverPath = self.replaceOccurrence(of: fileAttributes.serverPath)
 
@@ -279,7 +278,7 @@ public class ViewModel: Object, ViewModelDelegate
     {
         if self._sync == SyncStatus.upload.rawValue
         {
-            let keys = type(of: self).fileAttributes().keys
+            let keys = type(of: self).fileAttributes.keys
             for key in keys
             {
                 self.putFile(controller: nil, key: key)
@@ -287,7 +286,7 @@ public class ViewModel: Object, ViewModelDelegate
         }
         else if self._sync == SyncStatus.download.rawValue
         {
-            let keys = type(of: self).fileAttributes().keys
+            let keys = type(of: self).fileAttributes.keys
             for key in keys
             {
                 self.getFile(controller: nil, key: key)
