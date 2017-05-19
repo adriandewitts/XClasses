@@ -19,8 +19,8 @@ enum WebService
 
 extension WebService: TargetType
 {
-    //var baseURL: URL { return URL(string: "https://web-services-dot-bookbot-162503.appspot.com")! }
-    var baseURL: URL { return URL(string: "http://localhost:8080")! }
+    var baseURL: URL { return URL(string: "https://web-services-dot-bookbot-162503.appspot.com")! }
+    //var baseURL: URL { return URL(string: "http://localhost:8080")! }
 
 
     var path: String
@@ -49,12 +49,19 @@ extension WebService: TargetType
     {
         switch self
         {
-            case .read(_, _, _, let accessToken?, let lastTimestamp, let predicate?):
-                return ["access_token": accessToken, "last_timestamp": lastTimestamp, "predicate": predicate]
+            case .read(_, _, _, let accessToken, let lastTimestamp, let predicate):
+                var dict = ["last_timestamp": lastTimestamp.toUTCString() as Any]
+                if accessToken != nil
+                {
+                    dict["access_token"] = accessToken
+                }
+                if predicate != nil
+                {
+                    dict["predicate"] = predicate
+                }
+                return dict
             case .createAndUpdate(_, _, _, let accessToken, let records), .delete(_, _, _, let accessToken, let records):
                 return ["access_token": accessToken, "records": records]
-            default:
-                return [:]
         }
     }
 

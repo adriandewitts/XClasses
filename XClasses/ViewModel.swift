@@ -175,6 +175,8 @@ public class ViewModel: Object, ViewModelDelegate
                 }
             }
 
+            self._sync = SyncStatus.current.rawValue
+
             if isNew
             {
                 realm.add(self)
@@ -197,8 +199,9 @@ public class ViewModel: Object, ViewModelDelegate
     func getFile(controller: SyncControllerDelegate?, key: String = "default")
     {
         let fileAttributes = type(of: self).fileAttributes()[key]!
-        let localURL = URL(string: self.replaceOccurrence(of: fileAttributes.localURL))!
+        let localURL = Path(self.replaceOccurrence(of: fileAttributes.localURL)).url
         let serverPath = self.replaceOccurrence(of: fileAttributes.serverPath)
+
         let storage = Storage.storage(url: fileAttributes.bucket)
         let storageRef = storage.reference(forURL: fileAttributes.bucket + serverPath)
 

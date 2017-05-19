@@ -67,6 +67,7 @@ public class SyncController
 
     func sync(models: [AnyClass])
     {
+        // TODO: Background the sync and sleep each request for 3 seconds
         let user = Auth.auth().currentUser
         if let user = user
         {
@@ -109,7 +110,6 @@ public class SyncController
                     try! realm.write { syncModel.writeLock = Date() }
                     predicate = NSPredicate(format: "_sync = \(SyncStatus.created.rawValue) OR _sync = \(SyncStatus.updated.rawValue)")
                     let toSave = realm.objects(modelClass).filter(predicate)
-
                     if toSave.count > 0
                     {
                         provider.request(.createAndUpdate(version: modelClass.tableVersion(), table: modelClass.table(), view: modelClass.tableView(), accessToken: token, records: Array(toSave)))
@@ -144,10 +144,11 @@ public class SyncController
                                     Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                                 }
                             case let .failure(error):
+                                // TODO: If timer exists don't schedule another timer
                                 self.log(error: "Server connectivity error\(error)")
                                 Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                             }
-
+                            //try! realm.write { syncModel.writeLock = Date.distantPast }
                         }
 
                         // Delete records section
@@ -161,7 +162,7 @@ public class SyncController
                                 case let .success(moyaResponse):
                                     if moyaResponse.statusCode == 200
                                     {
-                                        // As long as the status code is a success, will delete these objects
+                                        // As long as the status code is a success, we will delete these objects
                                         try! realm.write { realm.delete(toDelete) }
                                     }
                                     else
@@ -172,10 +173,10 @@ public class SyncController
                                     self.log(error: "Server connectivity error\(error)")
                                     Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                                 }
+                                //try! realm.write { syncModel.writeLock = Date.distantPast }
+                                // TODO: Update and delete would both need to finish to release (At the moment keeping them commented out so it locks for a min
                             }
                         }
-
-                        try! realm.write { syncModel.writeLock = Date.distantPast }
                     }
                 }
             }
@@ -185,7 +186,7 @@ public class SyncController
     func readSync(models: [AnyClass], token: String, completion: () -> Void)
     {
         let realm = try! Realm()
-        let provider = MoyaProvider<WebService>()
+        let provider = MoyaProvider<WebService>()//(plugins: [NetworkLoggerPlugin(verbose: true)])
 
         for m in models
         {
@@ -260,11 +261,11 @@ public class SyncController
                         self.log(error: "Server connectivity error\(error)")
                         Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                     }
-                }
 
-                try! realm.write {
-                    syncModel.readLock = Date.distantPast
-                    syncModel.serverSync = timestamp
+                    try! realm.write {
+                        syncModel.readLock = Date.distantPast
+                        syncModel.serverSync = timestamp
+                    }
                 }
             }
         }
@@ -359,7 +360,7 @@ public class SyncController
 
     func log(error: String)
     {
-        //FIRAnalytics.logEvent(withName: "iOS Error", parameters: ["name": "Sync error" as NSObject, "error": error as NSObject])
+        //FirebaseCrash.log("iOS Sync Error: \(error)");
         print(error)
     }
 
