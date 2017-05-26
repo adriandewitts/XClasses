@@ -11,6 +11,7 @@ import RealmSwift
 import Firebase
 import FirebaseStorage
 import FileKit
+import Alamofire
 
 protocol ViewModelDelegate
 {
@@ -45,6 +46,8 @@ struct FileModel
 
 public class ViewModel: Object, ViewModelDelegate
 {
+    static let tryAgain = 60.0
+
     var _index: Int = 0 // Position on current list in memory
     dynamic var _sync = SyncStatus.created.rawValue // Record status for syncing
     dynamic var id = 0 // Server ID - do not make primary key, as it gets locked
@@ -107,7 +110,7 @@ public class ViewModel: Object, ViewModelDelegate
     // deleted on upload: as it says
     class var fileAttributes: [String: FileModel]
     {
-        return ["default": FileModel(bucket: "gs://default/", serverPath: "{clientID}.png", localURL: "/{clientID}.png", expiry: 3600, deleteOnUpload: true)]
+        return ["default": FileModel(bucket: "default", serverPath: "/{clientID}.png", localURL: "/{clientID}.png", expiry: 3600, deleteOnUpload: true)]
     }
 
     // End of overrides
@@ -183,6 +186,8 @@ public class ViewModel: Object, ViewModelDelegate
         }
     }
 
+    // File handling
+
     func fileURL(forKey: String = "default") -> (URL, Bool)
     {
         let path = self.path(forKey: forKey)
@@ -195,23 +200,32 @@ public class ViewModel: Object, ViewModelDelegate
         return Path(self.replaceOccurrence(of: fileAttributes.localURL))
     }
 
-    func getFile(controller: SyncControllerDelegate?, key: String = "default")
+    func serverURL(forKey: String = "default") -> URL
     {
-        let fileAttributes = type(of: self).fileAttributes[key]!
-        let localURL = Path(self.replaceOccurrence(of: fileAttributes.localURL)).url
-        let serverPath = self.replaceOccurrence(of: fileAttributes.serverPath)
+        let fileAttributes = type(of: self).fileAttributes[forKey]!
+        return URL(string: "https://storage.googleapis.com/" + fileAttributes.bucket + self.replaceOccurrence(of: fileAttributes.serverPath))!
+    }
 
-        let storage = Storage.storage(url: fileAttributes.bucket)
-        let storageRef = storage.reference(forURL: fileAttributes.bucket + serverPath)
+    func getFile(key: String = "default", progress: @escaping (_ progress: Progress) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in})
+    {
+        let (localURL, exists) = self.fileURL(forKey: key)
+        if !exists
+        {
+            let fileAttributes = type(of: self).fileAttributes[key]!
+            let localURL = Path(self.replaceOccurrence(of: fileAttributes.localURL)).url
+            let serverPath = self.replaceOccurrence(of: fileAttributes.serverPath)
 
-        _ = storageRef.write(toFile: localURL)
-        { url, error in
-            if let error = error
-            {
-                print(error)
+            let storage = Storage.storage(url: "gs://" + fileAttributes.bucket)
+            let storageRef = storage.reference(forURL: "gs://" + fileAttributes.bucket + serverPath)
+
+            let downloadTask = storageRef.write(toFile: localURL)
+
+            downloadTask.observe(.progress) { snapshot in
+                progress(snapshot.progress!)
             }
-            else
-            {
+
+            downloadTask.observe(.success) { snapshot in
+                completion(localURL)
                 if self._sync == SyncStatus.download.rawValue
                 {
                     let realm = try! Realm()
@@ -220,27 +234,43 @@ public class ViewModel: Object, ViewModelDelegate
                     }
                 }
             }
+
+            // Errors shouldn't happen - so log it and try again in a minute
+            downloadTask.observe(.failure) { snapshot in
+                E.log(error: snapshot.error!)
+                Timer.scheduledTimer(withTimeInterval: ViewModel.tryAgain, repeats: false, block: { timer in
+                    self.getFile(key: key, progress: progress, completion: completion)
+                })
+                // TODO: will send back only errors that the user sees in a modal
+                error(snapshot.error!)
+            }
+        }
+        else
+        {
+            completion(localURL)
         }
     }
 
-    func putFile(controller: SyncControllerDelegate?, key: String = "default")
+    func putFile(key: String = "default", progress: @escaping (_ progress: Progress) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in})
     {
         let fileAttributes = type(of: self).fileAttributes[key]!
         let localURL = Path(self.replaceOccurrence(of: fileAttributes.localURL)).url
         let serverPath = self.replaceOccurrence(of: fileAttributes.serverPath)
 
-        let storage = Storage.storage(url: fileAttributes.bucket)
-        let storageRef = storage.reference(forURL: fileAttributes.bucket + serverPath)
+        let storage = Storage.storage(url: "gs://" + fileAttributes.bucket)
+        let storageRef = storage.reference(forURL: "gs://" + fileAttributes.bucket + serverPath)
         let metadata = StorageMetadata()
         metadata.customMetadata = self.exportProperties()
 
-        _ = storageRef.putFile(from: localURL, metadata: metadata)
-        { metadata, error in
-            if let error = error
-            {
-                print(error)
-            }
-            else
+        let uploadTask = storageRef.putFile(from: localURL, metadata: metadata)
+
+        uploadTask.observe(.progress) { snapshot in
+            progress(snapshot.progress!)
+        }
+
+        uploadTask.observe(.success) { snapshot in
+            completion(localURL)
+            if self._sync == SyncStatus.download.rawValue
             {
                 if self._sync == SyncStatus.upload.rawValue
                 {
@@ -253,13 +283,67 @@ public class ViewModel: Object, ViewModelDelegate
                 {
                     try! FileManager.default.removeItem(at: localURL)
                 }
-                // Metadata contains file metadata such as size, content-type, and download URL.
-                //let downloadURL = metadata!.downloadURL()
-                // TODO: set file locations
-                // TODO: monitor uploads and downloads progress and send to delegate
             }
         }
+
+        // Errors shouldn't happen - so log it and try again in a minute
+        uploadTask.observe(.failure) { snapshot in
+            E.log(error: snapshot.error!)
+            Timer.scheduledTimer(withTimeInterval: ViewModel.tryAgain, repeats: false, block: { timer in
+                self.putFile(key: key, progress: progress, completion: completion)
+            })
+            // TODO: will send back only errors that the user sees in a modal
+            error(snapshot.error!)
+        }
     }
+
+    func streamFile(key: String = "default", progress: @escaping (_ temporyURL: URL) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in})
+    {
+        let source = self.serverURL()
+        let (localURL, exists) = self.fileURL()
+
+        if !exists
+        {
+            Alamofire.download(source, to: { temp, response in
+                progress(temp)
+                return (localURL, [.removePreviousFile, .createIntermediateDirectories])
+            }).response { response in
+                if response.error != nil
+                {
+                    completion(response.destinationURL!)
+                }
+                else
+                {
+                    //TODO: Humanise the error for display in modal
+                    error(response.error!)
+                }
+            }
+        }
+        else
+        {
+            completion(localURL)
+        }
+    }
+
+//    func syncFiles()
+//    {
+//        if self._sync == SyncStatus.upload.rawValue
+//        {
+//            let keys = type(of: self).fileAttributes.keys
+//            for key in keys
+//            {
+//                self.putFile(key: key)
+//            }
+//        }
+//        else if self._sync == SyncStatus.download.rawValue
+//        {
+//            let keys = type(of: self).fileAttributes.keys
+//            for key in keys
+//            {
+//                self.getFile(key: key)
+//            }
+//        }
+//    }
 
     private func replaceOccurrence(of: String) -> String
     {
@@ -272,30 +356,11 @@ public class ViewModel: Object, ViewModelDelegate
 
         return replacement.replacingOccurrences(of: "{uid}", with: SyncController.sharedInstance.uid)
     }
-
-
-    func syncFiles()
-    {
-        if self._sync == SyncStatus.upload.rawValue
-        {
-            let keys = type(of: self).fileAttributes.keys
-            for key in keys
-            {
-                self.putFile(controller: nil, key: key)
-            }
-        }
-        else if self._sync == SyncStatus.download.rawValue
-        {
-            let keys = type(of: self).fileAttributes.keys
-            for key in keys
-            {
-                self.getFile(controller: nil, key: key)
-            }
-        }
-    }
 }
 
-// TODO: Removal of record - periodically - when a certain age
+
+
+// TODO: Record cleanup - periodically - when a certain age
 // TODO: File cleanup after certain age
 
 // File jobs

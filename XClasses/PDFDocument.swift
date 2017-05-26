@@ -23,12 +23,12 @@ protocol PDFPageDelegate
 class PDFDocument
 {
     let cachedImages = NSCache<NSNumber, UIImage>()
-    let pdfDocument: CGPDFDocument?
+    var pdfDocument: CGPDFDocument?
 
     init(url: URL)
     {
-        pdfDocument = CGPDFDocument(url as CFURL)
-        cachedImages.countLimit = 5
+        self.pdfDocument = CGPDFDocument(url as CFURL)
+        self.cachedImages.countLimit = 5
     }
 
     func cachePages(index: Int)

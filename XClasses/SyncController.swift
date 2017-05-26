@@ -12,12 +12,6 @@ import RealmSwift
 import Moya
 import FileKit
 
-protocol SyncControllerDelegate
-{
-    func belatedResponse(response: Results<Object>, error: String?)
-    //func tranferStatus(progress: Int, result: String?, error: String?)
-}
-
 public class SyncModel: Object
 {
     dynamic var modelName = ""
@@ -135,17 +129,17 @@ public class SyncController
                                             }
                                         }
                                     }
-                                    catch { self.log(error: "Response was impossibly incorrect") }
+                                    catch { E.log(error: "From writeSync: Response was impossibly incorrect", from: self) }
                                 }
                                 else
                                 {
                                     // TODO: if 403 show login modal
-                                    self.log(error: "Server returned status code \(moyaResponse.statusCode)")
+                                    E.log(error: "Server returned status code \(moyaResponse.statusCode)", from: self)
                                     Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                                 }
                             case let .failure(error):
                                 // TODO: If timer exists don't schedule another timer
-                                self.log(error: "Server connectivity error\(error)")
+                                E.log(error: error, from: self)
                                 Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                             }
                             //try! realm.write { syncModel.writeLock = Date.distantPast }
@@ -167,10 +161,10 @@ public class SyncController
                                     }
                                     else
                                     {
-                                        self.log(error: "Either user was trying to delete records they can't or something went wrong with the server")
+                                        E.log(error: "Either user was trying to delete records they can't or something went wrong with the server")
                                     }
                                 case let .failure(error):
-                                    self.log(error: "Server connectivity error\(error)")
+                                    E.log(error: error)
                                     Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                                 }
                                 //try! realm.write { syncModel.writeLock = Date.distantPast }
@@ -249,16 +243,16 @@ public class SyncController
                                     }
                                 }
                             }
-                            catch { self.log(error: "Response was impossibly incorrect") }
+                            catch { E.log(error: "Response was impossibly incorrect") }
                         }
                         else
                         {
                             // TODO: if 403 show login modal
-                            self.log(error: "Server returned status code \(moyaResponse.statusCode)")
+                            E.log(error: "Server returned status code \(moyaResponse.statusCode)")
                             Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                         }
                     case let .failure(error):
-                        self.log(error: "Server connectivity error\(error)")
+                        E.log(error: "Server connectivity error\(error)")
                         Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                     }
 
@@ -266,12 +260,15 @@ public class SyncController
                         syncModel.readLock = Date.distantPast
                         syncModel.serverSync = timestamp
                     }
+                    // TODO Run completion here
                 }
             }
         }
     }
 
-    func query(model: AnyClass, query: NSPredicate, order: String, orderAscending: Bool, controller: SyncControllerDelegate, freshness: Double = 3600) -> (Results<Object>, String?)
+    // TODO: fix query to have completion handler
+
+    func query(model: AnyClass, query: NSPredicate, order: String, orderAscending: Bool, freshness: Double = 3600) -> (Results<Object>, String?)
     {
         let realm = try! Realm()
         let result = realm.objects(model as! Object.Type).filter(query).sorted(byKeyPath: order, ascending: orderAscending)
@@ -281,6 +278,7 @@ public class SyncController
         {
             // TODO: Is Fresh if push notifcations are on
             let interval = syncModel.serverSync.timeIntervalSince(Date())
+            // If results are fresh send it back - that's it
             if interval < freshness
             {
                 return (result, nil)
@@ -291,15 +289,17 @@ public class SyncController
                 // If there is already content, lets fix the time to max 3 seconds to find anything new. Otherwise wait until we do get something back.
                 if result.count > 0
                 {
-                    timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { timer in self.checkin(model: model, query: query, order: order, orderAscending: orderAscending, controller: controller)})
+                    timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { timer in self.checkin(model: model, query: query, order: order, orderAscending: orderAscending)})
                 }
 
+                // Once data is synced, invalidate timer if needed and then send data back
+                // TODO: run completion handler
                 self.readSync(model: model, completion: {
                     if let timer = timer
                     {
                         if timer.isValid { timer.invalidate() }
                     }
-                    self.checkin(model: model, query: query, order: order, orderAscending: orderAscending, controller: controller)
+                    self.checkin(model: model, query: query, order: order, orderAscending: orderAscending)
                 })
 
             }
@@ -323,7 +323,7 @@ public class SyncController
         else { self.readSync(models: [model], token: "", completion: completion) }
     }
 
-    func checkin(model: AnyClass, query: NSPredicate, order: String, orderAscending: Bool, controller: SyncControllerDelegate)
+    func checkin(model: AnyClass, query: NSPredicate, order: String, orderAscending: Bool)
     {
         let realm = try! Realm()
         let predicate = NSPredicate(format: "modelName = '\(model)'")
@@ -337,36 +337,38 @@ public class SyncController
             }
 
             let result = realm.objects(model as! Object.Type).filter(query).sorted(byKeyPath: order, ascending: orderAscending)
-            controller.belatedResponse(response: result, error: error)
+            // TODO: Create completion handler
         }
     }
 
-    func fileSync(models: [AnyClass])
-    {
-        // TODO: Needs robust checking and status
-        // TODO: Limit downloads and uploads at the same time
-        let realm = try! Realm()
-        let predicate = NSPredicate(format: "_sync = \(SyncStatus.upload.rawValue) or _sync = \(SyncStatus.download.rawValue) ")
+//    func fileSync(models: [AnyClass])
+//    {
+//        // TODO: Needs robust checking and status
+//        // TODO: Limit downloads and uploads at the same time
+//        let realm = try! Realm()
+//        let predicate = NSPredicate(format: "_sync = \(SyncStatus.upload.rawValue) or _sync = \(SyncStatus.download.rawValue) ")
+//
+//        for model in models
+//        {
+//            let result = realm.objects(model as! Object.Type).filter(predicate)
+//            for item in result
+//            {
+//                (item as! ViewModel).syncFiles()
+//            }
+//        }
+//    }
 
-        for model in models
-        {
-            let result = realm.objects(model as! Object.Type).filter(predicate)
-            for item in result
-            {
-                (item as! ViewModel).syncFiles()
-            }
-        }
-    }
-
-    func log(error: String)
-    {
-        //FirebaseCrash.log("iOS Sync Error: \(error)");
-        print(error)
-    }
 
     // TODO: will search on server and cache these queries in a different Realm DB
     // func directQuery(model: AnyClass, query: NSPredicate, order: String, controller: SyncControllerDelegate, freshness: Int = 3600) -> ([ViewModel], String)
-    // 
 }
 
-
+public class E
+{
+    static func log(error: Any, from: Any? = nil)
+    {
+        //TODO: setup errors to go to Fabric
+        //FirebaseCrash.log("iOS Sync Error: \(error)");
+        print(error)
+    }
+}

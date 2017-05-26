@@ -51,6 +51,8 @@ extension Date
     }
 }
 
+//TODO: This needs to be fixed up to make clear the path, urlstring, and url
+
 extension String
 {
     func toURLString() -> String
