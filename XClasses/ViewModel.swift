@@ -305,18 +305,22 @@ public class ViewModel: Object, ViewModelDelegate
         if !exists
         {
             Alamofire.download(source, to: { temp, response in
+                //DispatchQueue.main.async { progress(temp) }
                 progress(temp)
                 return (localURL, [.removePreviousFile, .createIntermediateDirectories])
             }).response { response in
-                if response.error != nil
-                {
-                    completion(response.destinationURL!)
-                }
-                else
-                {
-                    //TODO: Humanise the error for display in modal
-                    error(response.error!)
-                }
+                //DispatchQueue.main.async
+                //{
+                    if response.error != nil
+                    {
+                        completion(response.destinationURL!)
+                    }
+                    else
+                    {
+                        //TODO: Humanise the error for display in modal
+                        //error(response.error!)
+                    }
+                //}
             }
         }
         else
@@ -363,6 +367,6 @@ public class ViewModel: Object, ViewModelDelegate
 // TODO: Record cleanup - periodically - when a certain age
 // TODO: File cleanup after certain age
 
-// File jobs
+// File jobs and status
 // model, clientID, progress, lastProgressTime
 // status: toTransfer, transferring, transferred, pause?

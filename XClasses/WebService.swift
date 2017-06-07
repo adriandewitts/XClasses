@@ -19,7 +19,8 @@ enum WebService
 
 extension WebService: TargetType
 {
-    var baseURL: URL { return URL(string: "https://web-services-dot-bookbot-162503.appspot.com")! }
+    // TODO: switch to db.bookbotkids.com when it has SSL
+    var baseURL: URL { return URL(string: "https://db-dot-bookbot-162503.appspot.com")! }
     //var baseURL: URL { return URL(string: "http://localhost:8080")! }
 
 
