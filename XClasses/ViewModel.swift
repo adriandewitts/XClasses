@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Realm
 import RealmSwift
 import Firebase
 import FirebaseStorage
@@ -23,6 +24,27 @@ protocol ViewModelDelegate
 class RealmString: Object
 {
     dynamic var stringValue = ""
+
+    init(stringValue: String)
+    {
+        super.init()
+        self.stringValue = stringValue
+    }
+    
+    required init(realm: RLMRealm, schema: RLMObjectSchema)
+    {
+        super.init(realm: realm, schema: schema)
+    }
+    
+    required init()
+    {
+        super.init()
+    }
+    
+    required init(value: Any, schema: RLMSchema)
+    {
+        super.init(value: value, schema: schema)
+    }
 }
 
 enum SyncStatus: Int
@@ -224,13 +246,16 @@ public class ViewModel: Object, ViewModelDelegate
                 progress(snapshot.progress!)
             }
 
+            let selfRef = ThreadSafeReference(to: self)
+
             downloadTask.observe(.success) { snapshot in
                 completion(localURL)
                 if self._sync == SyncStatus.download.rawValue
                 {
                     let realm = try! Realm()
+                    let threadSafeSelf = realm.resolve(selfRef)!
                     try! realm.write {
-                        self._sync = SyncStatus.current.rawValue
+                        threadSafeSelf._sync = SyncStatus.current.rawValue
                     }
                 }
             }
@@ -268,6 +293,8 @@ public class ViewModel: Object, ViewModelDelegate
             progress(snapshot.progress!)
         }
 
+        let selfRef = ThreadSafeReference(to: self)
+
         uploadTask.observe(.success) { snapshot in
             completion(localURL)
             if self._sync == SyncStatus.download.rawValue
@@ -275,8 +302,9 @@ public class ViewModel: Object, ViewModelDelegate
                 if self._sync == SyncStatus.upload.rawValue
                 {
                     let realm = try! Realm()
+                    let threadSafeSelf = realm.resolve(selfRef)!
                     try! realm.write {
-                        self._sync = SyncStatus.current.rawValue
+                        threadSafeSelf._sync = SyncStatus.current.rawValue
                     }
                 }
                 if fileAttributes.deleteOnUpload
