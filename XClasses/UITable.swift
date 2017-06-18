@@ -20,11 +20,11 @@ class XUITableViewController: UITableViewController, ViewModelManagerDelegate
         super.viewDidLoad()
         viewModel = pullViewModel(viewModel: viewModel)
         viewModelCollection = viewModel.relatedCollection
-        self.clearsSelectionOnViewWillAppear = false
+        clearsSelectionOnViewWillAppear = false
         let vmTitle = viewModel.properties["title"]
         if vmTitle != "Placeholder"
         {
-            self.title = vmTitle
+            title = vmTitle
         }
     }
 

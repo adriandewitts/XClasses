@@ -21,14 +21,14 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
 
         // Load in image from viewModel
 
-        if let imageURL = self.viewModel.properties["image"]
+        if let imageURL = viewModel.properties["image"]
         {
             Nuke.loadImage(with: URL(string: imageURL)!, into: imageView)
         }
 
-        if self.waitAnimationFileName != nil && self.imageView.image == nil
+        if waitAnimationFileName != nil && imageView.image == nil
         {
-            self.runWaitAnimation()
+            runWaitAnimation()
         }
 
         // Setup rest of ImageView with behaviours
@@ -56,7 +56,7 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
     func runWaitAnimation()
     {
         // TODO: work out proper default system - look at working out duration
-        imageView.image = UIImage.animatedImageNamed(self.waitAnimationFileName!, duration: 3.0)
+        imageView.image = UIImage.animatedImageNamed(waitAnimationFileName!, duration: 3.0)
     }
 
     override func viewDidLayoutSubviews()
@@ -71,7 +71,7 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
     func scaleView(size: CGSize)
     {
         scrollView.zoomScale = 1.0
-        if let image = self.imageView.image
+        if let image = imageView.image
         {
             let proportionalSize = image.size.proportionalSizing(to: size, contentMode: scrollView.contentMode)
             imageView.frame = CGRect(origin: CGPoint.zero, size: proportionalSize)
@@ -130,7 +130,7 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
 
     func viewForZooming(in scrollView: UIScrollView) -> UIView?
     {
-        return self.imageView
+        return imageView
     }
 
 //    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView)

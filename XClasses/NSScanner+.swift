@@ -47,7 +47,7 @@ extension Scanner {
             return value
         }
         
-        if self.isAtEnd { return nil }
+        if isAtEnd { return nil }
         return ""
     }
     

@@ -35,11 +35,11 @@ class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, 
             }
         }
 
-        self.microphone = AKMicrophone()
-        try! self.microphone.setDevice(device)
+        microphone = AKMicrophone()
+        try! microphone.setDevice(device)
 
-        self.expander = AKExpander(self.microphone)
-        //self.expander.
+        expander = AKExpander(microphone)
+        //expander.
 
         super.init()
     }
@@ -47,8 +47,8 @@ class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, 
     func start(context: [String] = [], response: @escaping (_ transcription: String) -> Void)
     {
         self.response = response
-        self.prepareRecogniser(context: context)
-        self.microphone.avAudioNode.installTap(onBus: 0, bufferSize: 1024, format: AudioKit.format, block: { buffer, time in
+        prepareRecogniser(context: context)
+        microphone.avAudioNode.installTap(onBus: 0, bufferSize: 1024, format: AudioKit.format, block: { buffer, time in
             self.speechRecognition.append(buffer)
         })
 
@@ -58,7 +58,7 @@ class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, 
     func stop()
     {
         AudioKit.stop()
-        self.microphone.avAudioNode.removeTap(onBus: 0)
+        microphone.avAudioNode.removeTap(onBus: 0)
         speechRecognition.endAudio()
     }
 
@@ -91,11 +91,11 @@ class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, 
         let locale = NSLocale(localeIdentifier: "en_EN")
         let recogniser = SFSpeechRecognizer(locale: locale as Locale)!
 
-        self.speechRecognition = SFSpeechAudioBufferRecognitionRequest()
-        self.speechRecognition.taskHint = .dictation
-        self.speechRecognition.contextualStrings = context
+        speechRecognition = SFSpeechAudioBufferRecognitionRequest()
+        speechRecognition.taskHint = .dictation
+        speechRecognition.contextualStrings = context
 
-        recogniser.recognitionTask(with: self.speechRecognition, delegate: self)
+        recogniser.recognitionTask(with: speechRecognition, delegate: self)
     }
 
 
@@ -103,7 +103,7 @@ class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, 
 
     func speechRecognitionTask(_ task: SFSpeechRecognitionTask, didHypothesizeTranscription transcription: SFTranscription)
     {
-        self.response(transcription.formattedString)
+        response(transcription.formattedString)
     }
 
 

@@ -27,7 +27,7 @@ class XUICollectionViewController: UICollectionViewController, ViewModelManagerD
         viewModel = pullViewModel(viewModel: viewModel)
         viewModelCollection = viewModel.relatedCollection
 
-        self.clearsSelectionOnViewWillAppear = false
+        clearsSelectionOnViewWillAppear = false
     }
 
     override func didReceiveMemoryWarning()
@@ -55,7 +55,7 @@ class XUICollectionViewController: UICollectionViewController, ViewModelManagerD
 
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewFlowLayout, sizeForItemAtIndexPath indexPath: IndexPath) -> CGSize
     {
-        return self.standardisedCellSize(cellWidthSize, aspectRatio: aspectRatio, leftInset: collectionViewLayout.sectionInset.left, rightInset: collectionViewLayout.sectionInset.right, minimumCellSpacing: collectionViewLayout.minimumInteritemSpacing)
+        return standardisedCellSize(cellWidthSize, aspectRatio: aspectRatio, leftInset: collectionViewLayout.sectionInset.left, rightInset: collectionViewLayout.sectionInset.right, minimumCellSpacing: collectionViewLayout.minimumInteritemSpacing)
     }
 
     override func prepare(for segue: UIStoryboardSegue, sender: Any?)

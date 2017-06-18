@@ -137,7 +137,7 @@ public class ViewModel: Object, ViewModelDelegate
     func exportProperties() -> [String: String]
     {
         var properties = [String: String]()
-        let schemaProperties = self.objectSchema.properties
+        let schemaProperties = objectSchema.properties
 
         for property in schemaProperties
         {
@@ -157,7 +157,7 @@ public class ViewModel: Object, ViewModelDelegate
             }
         }
 
-        if self.id == 0
+        if id == 0
         {
             properties["id"] = ""
         }
@@ -168,7 +168,7 @@ public class ViewModel: Object, ViewModelDelegate
     // Imports the data from the CSV and does the type casting that it needs to do
     func importProperties(dictionary: [String: String], isNew: Bool)
     {
-        let schemaProperties = self.objectSchema.properties
+        let schemaProperties = objectSchema.properties
         let realm = try! Realm()
         
         try! realm.write {
@@ -195,7 +195,7 @@ public class ViewModel: Object, ViewModelDelegate
                 }
             }
 
-            self._sync = SyncStatus.current.rawValue
+            _sync = SyncStatus.current.rawValue
 
             if isNew
             {
@@ -215,24 +215,24 @@ public class ViewModel: Object, ViewModelDelegate
     func path(forKey: String = "default") -> Path
     {
         let fileAttributes = type(of: self).fileAttributes[forKey]!
-        return Path(self.replaceOccurrence(of: fileAttributes.localURL))
+        return Path(replaceOccurrence(of: fileAttributes.localURL))
     }
 
     func serverURL(forKey: String = "default") -> URL
     {
         let fileAttributes = type(of: self).fileAttributes[forKey]!
-        return URL(string: "https://storage.googleapis.com/" + fileAttributes.bucket + self.replaceOccurrence(of: fileAttributes.serverPath))!
+        return URL(string: "https://storage.googleapis.com/" + fileAttributes.bucket + replaceOccurrence(of: fileAttributes.serverPath))!
     }
 
     // TODO: return wait flag
     func getFile(key: String = "default", progress: @escaping (_ progress: Progress) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in})
     {
-        let (localURL, exists) = self.fileURL(forKey: key)
+        let (localURL, exists) = fileURL(forKey: key)
         if !exists
         {
             let fileAttributes = type(of: self).fileAttributes[key]!
-            let localURL = Path(self.replaceOccurrence(of: fileAttributes.localURL)).url
-            let serverPath = self.replaceOccurrence(of: fileAttributes.serverPath)
+            let localURL = Path(replaceOccurrence(of: fileAttributes.localURL)).url
+            let serverPath = replaceOccurrence(of: fileAttributes.serverPath)
 
             let storage = Storage.storage(url: "gs://" + fileAttributes.bucket)
             let storageRef = storage.reference(forURL: "gs://" + fileAttributes.bucket + serverPath)
@@ -277,13 +277,13 @@ public class ViewModel: Object, ViewModelDelegate
     func putFile(key: String = "default", progress: @escaping (_ progress: Progress) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in})
     {
         let fileAttributes = type(of: self).fileAttributes[key]!
-        let localURL = Path(self.replaceOccurrence(of: fileAttributes.localURL)).url
-        let serverPath = self.replaceOccurrence(of: fileAttributes.serverPath)
+        let localURL = Path(replaceOccurrence(of: fileAttributes.localURL)).url
+        let serverPath = replaceOccurrence(of: fileAttributes.serverPath)
 
         let storage = Storage.storage(url: "gs://" + fileAttributes.bucket)
         let storageRef = storage.reference(forURL: "gs://" + fileAttributes.bucket + serverPath)
         let metadata = StorageMetadata()
-        metadata.customMetadata = self.exportProperties()
+        metadata.customMetadata = exportProperties()
 
         let uploadTask = storageRef.putFile(from: localURL, metadata: metadata)
 
@@ -326,8 +326,8 @@ public class ViewModel: Object, ViewModelDelegate
     // TODO: return wait flag
     func streamFile(key: String = "default", progress: @escaping (_ temporyURL: URL) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in})
     {
-        let source = self.serverURL()
-        let (localURL, exists) = self.fileURL()
+        let source = serverURL()
+        let (localURL, exists) = fileURL()
 
         if !exists
         {
@@ -358,20 +358,20 @@ public class ViewModel: Object, ViewModelDelegate
 
 //    func syncFiles()
 //    {
-//        if self._sync == SyncStatus.upload.rawValue
+//        if _sync == SyncStatus.upload.rawValue
 //        {
 //            let keys = type(of: self).fileAttributes.keys
 //            for key in keys
 //            {
-//                self.putFile(key: key)
+//                putFile(key: key)
 //            }
 //        }
-//        else if self._sync == SyncStatus.download.rawValue
+//        else if _sync == SyncStatus.download.rawValue
 //        {
 //            let keys = type(of: self).fileAttributes.keys
 //            for key in keys
 //            {
-//                self.getFile(key: key)
+//                getFile(key: key)
 //            }
 //        }
 //    }
@@ -379,7 +379,7 @@ public class ViewModel: Object, ViewModelDelegate
     private func replaceOccurrence(of: String) -> String
     {
         var replacement = of
-        let schemaProperties = self.objectSchema.properties
+        let schemaProperties = objectSchema.properties
         for property in schemaProperties
         {
             replacement = replacement.replacingOccurrences(of: "{\(property.name)}", with: String(describing: self[property.name]!))

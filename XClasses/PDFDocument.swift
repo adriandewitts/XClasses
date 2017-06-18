@@ -31,15 +31,15 @@ class PDFDocument
 
     init(url: URL)
     {
-        self.pdfDocument = CGPDFDocument(url as CFURL)
-        self.cachedImages.countLimit = 5
+        pdfDocument = CGPDFDocument(url as CFURL)
+        cachedImages.countLimit = 5
     }
 
     // PDF is fully loaded
 //    func pdfPageImage(at index: Int, size: CGSize = UIScreen.main.bounds.size) -> UIImage?
 //    {
 //        cachePages(index: index, size: size)
-//        return self.cachedImages.object(forKey: NSNumber(value: index))
+//        return cachedImages.object(forKey: NSNumber(value: index))
 //    }
 
     // PDF is streamed
@@ -47,15 +47,15 @@ class PDFDocument
     {
         cachePages(index: index, size: size)
 
-        if let image = self.cachedImages.object(forKey: NSNumber(value: index))
+        if let image = cachedImages.object(forKey: NSNumber(value: index))
         {
             completion(image)
             return image
         }
 
-        if self.firstRetry == nil
+        if firstRetry == nil
         {
-            self.firstRetry = Date()
+            firstRetry = Date()
         }
         if firstRetry!.timeIntervalSinceNow < TimeInterval(60.0)
         {

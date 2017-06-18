@@ -29,7 +29,7 @@ extension CGPDFDocument
 {
     func uiImageFromPDFPage(pageNumber: Int, size: CGSize, aspectFill: Bool = true) -> UIImage?
     {
-        guard let page = self.page(at: pageNumber) else { return nil }
+        guard let page = page(at: pageNumber) else { return nil }
 
         // Determine the size of the PDF page.
         // TODO use proportional sizing below

@@ -71,9 +71,9 @@ class XSplitViewController: UISplitViewController, UISplitViewControllerDelegate
     {
         super.viewDidLoad()
 
-//        let navigationController = self.viewControllers[self.viewControllers.count - 1] as! UINavigationController
-//        navigationController.topViewController!.navigationItem.leftBarButtonItem = self.displayModeButtonItem
-        self.delegate = self
+//        let navigationController = viewControllers[viewControllers.count - 1] as! UINavigationController
+//        navigationController.topViewController!.navigationItem.leftBarButtonItem = displayModeButtonItem
+        delegate = self
     }
 
     func splitViewController(_ splitViewController: UISplitViewController, collapseSecondary secondaryViewController:UIViewController, onto primaryViewController:UIViewController) -> Bool
@@ -93,7 +93,7 @@ extension UISplitViewController
 {
     func toggleMasterView()
     {
-        let button = self.displayModeButtonItem
+        let button = displayModeButtonItem
         let _ = button.target?.perform(button.action, with: button)
     }
 }

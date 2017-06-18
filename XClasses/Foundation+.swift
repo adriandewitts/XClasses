@@ -15,13 +15,13 @@ extension String
         let pattern = "([a-z0-9])([A-Z])"
 
         let regex = try? NSRegularExpression(pattern: pattern, options: [])
-        let range = NSRange(location: 0, length: self.characters.count)
+        let range = NSRange(location: 0, length: characters.count)
         return (regex?.stringByReplacingMatches(in: self, options: [], range: range, withTemplate: "$1_$2").lowercased())!
     }
 
     func camelCase() -> String
     {
-        let items = self.components(separatedBy: "_")
+        let items = components(separatedBy: "_")
         var camelCase = ""
 
         items.enumerated().forEach
@@ -65,9 +65,9 @@ extension String
 {
     func toURLString() -> String
     {
-        if self.hasPrefix("/") || self.hasPrefix("http://")
+        if hasPrefix("/") || hasPrefix("http://")
         {
-            return self.escape()
+            return escape()
         }
 
         if let urlString = Bundle.main.path(forResource: self, ofType: nil)
@@ -87,8 +87,8 @@ extension String
 
     func toURL() -> URL
     {
-        var urlString = self.toURLString()
-        if self.hasPrefix("/")
+        var urlString = toURLString()
+        if hasPrefix("/")
         {
             urlString = "file:/\(urlString)"
         }
@@ -97,7 +97,7 @@ extension String
 
     func escape() -> String
     {
-        return self.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+        return addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
     }
 }
 

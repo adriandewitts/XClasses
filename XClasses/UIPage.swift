@@ -30,7 +30,7 @@ class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSourc
             index = Int(indexAsString)!
         }
 
-        setViewControllers([self.controller(from: index)], direction: .forward, animated: true, completion: nil)
+        setViewControllers([controller(from: index)], direction: .forward, animated: true, completion: nil)
     }
 
     func controller(from index: Int) -> UIViewController
@@ -52,7 +52,7 @@ class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSourc
 
         if index < viewModelCollection.count
         {
-            return self.controller(from: index)
+            return controller(from: index)
         }
 
         return nil
@@ -65,7 +65,7 @@ class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSourc
 
         if index >= 0
         {
-            return self.controller(from: index)
+            return controller(from: index)
         }
 
         return nil

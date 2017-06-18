@@ -80,7 +80,7 @@ public class SyncController
         }
         else
         {
-            self.readSync(models: models, token: "", completion: {})
+            readSync(models: models, token: "", completion: {})
         }
     }
 
@@ -294,7 +294,7 @@ public class SyncController
 
                 // Once data is synced, invalidate timer if needed and then send data back
                 // TODO: run completion handler
-                self.readSync(model: model, completion: {
+                readSync(model: model, completion: {
                     if let timer = timer
                     {
                         if timer.isValid { timer.invalidate() }
@@ -320,7 +320,7 @@ public class SyncController
                 self.readSync(models: [model], token: token!, completion: completion)
             }
         }
-        else { self.readSync(models: [model], token: "", completion: completion) }
+        else { readSync(models: [model], token: "", completion: completion) }
     }
 
     func checkin(model: AnyClass, query: NSPredicate, order: String, orderAscending: Bool)
