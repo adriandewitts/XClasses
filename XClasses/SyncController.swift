@@ -84,6 +84,7 @@ public class SyncController
         }
     }
 
+    //TODO: Completion handler
     func writeSync(models: [AnyClass], token: String)
     {
         let realm = try! Realm()
@@ -267,7 +268,6 @@ public class SyncController
     }
 
     // TODO: fix query to have completion handler
-
     func query(model: AnyClass, query: NSPredicate, order: String, orderAscending: Bool, freshness: Double = 3600) -> (Results<Object>, String?)
     {
         let realm = try! Realm()

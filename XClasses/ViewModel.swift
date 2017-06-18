@@ -75,10 +75,6 @@ public class ViewModel: Object, ViewModelDelegate
     dynamic var id = 0 // Server ID - do not make primary key, as it gets locked
     dynamic var clientId = UUID().uuidString // Used to make sure records arent saved to the server DB multiple times
 
-//    class var pp: String { get {
-//        return "clientId" }
-//    }
-
     // Mark: Override in subclass
 
     override public class func primaryKey() -> String?
@@ -118,12 +114,12 @@ public class ViewModel: Object, ViewModelDelegate
 
     var properties: [String: String]
     {
-        return ["title": "Placeholder", "path": "/", "image": "default.png"]
+        return [:]
     }
 
     var relatedCollection: [ViewModelDelegate]
     {
-        return [ViewModel()]
+        return []
     }
 
     // serverURL: gs:// url on google cloud storage
@@ -228,6 +224,7 @@ public class ViewModel: Object, ViewModelDelegate
         return URL(string: "https://storage.googleapis.com/" + fileAttributes.bucket + self.replaceOccurrence(of: fileAttributes.serverPath))!
     }
 
+    // TODO: return wait flag
     func getFile(key: String = "default", progress: @escaping (_ progress: Progress) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in})
     {
         let (localURL, exists) = self.fileURL(forKey: key)
@@ -276,6 +273,7 @@ public class ViewModel: Object, ViewModelDelegate
         }
     }
 
+    // TODO: return wait flag
     func putFile(key: String = "default", progress: @escaping (_ progress: Progress) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in})
     {
         let fileAttributes = type(of: self).fileAttributes[key]!
@@ -325,6 +323,7 @@ public class ViewModel: Object, ViewModelDelegate
         }
     }
 
+    // TODO: return wait flag
     func streamFile(key: String = "default", progress: @escaping (_ temporyURL: URL) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in})
     {
         let source = self.serverURL()

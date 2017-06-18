@@ -36,10 +36,11 @@ class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSourc
     func controller(from index: Int) -> UIViewController
     {
         var controller = storyboard!.instantiateViewController(withIdentifier: pageControllerStoryBoardID) as! ViewModelManagerDelegate
-        var vm = viewModelCollection[index]
-
-        vm._index = index
-        controller.viewModel = vm
+        if var vm = viewModelCollection[safe: index]
+        {
+            vm._index = index
+            controller.viewModel = vm
+        }
 
         return controller as! UIViewController
     }

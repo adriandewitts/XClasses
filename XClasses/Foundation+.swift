@@ -51,6 +51,14 @@ extension Date
     }
 }
 
+extension Collection where Indices.Iterator.Element == Index
+{
+    // Returns the element at the specified index if it is within bounds, otherwise nil.
+    subscript (safe index: Index) -> Generator.Element? {
+        return indices.contains(index) ? self[index] : nil
+    }
+}
+
 //TODO: This needs to be fixed up to make clear the path, urlstring, and url
 
 extension String

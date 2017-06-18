@@ -42,6 +42,12 @@ func pullViewModel(viewModel: ViewModelDelegate) -> ViewModelDelegate
     return vm
 }
 
+// TODO: Change to below
+//func pull() -> ViewModelDelegate
+//{
+//    return XUIFlowController.sharedInstance.viewModel
+//}
+
 class XUIViewController: UIViewController, ViewModelManagerDelegate
 {
     var viewModel = ViewModel() as ViewModelDelegate

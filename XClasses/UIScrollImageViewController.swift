@@ -10,15 +10,35 @@ import Nuke
 
 class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
 {
-    var image: UIImage?
-
     @IBOutlet var scrollView: UIScrollView!
     @IBOutlet var imageView: UIImageView!
     var freshView = true
+    var waitAnimationFileName: String? = "Wait"
 
     override func viewDidLoad()
     {
         super.viewDidLoad()
+
+        // Load in image from viewModel
+
+        if let imageURL = self.viewModel.properties["image"]
+        {
+            Nuke.loadImage(with: URL(string: imageURL)!, into: imageView)
+        }
+
+        if self.waitAnimationFileName != nil && self.imageView.image == nil
+        {
+            self.runWaitAnimation()
+        }
+
+        // Setup rest of ImageView with behaviours
+
+        imageView.contentMode = UIViewContentMode.scaleAspectFit
+
+        if UIScreen.main.traitCollection.userInterfaceIdiom == .phone
+        {
+            navigationController?.setNavigationBarHidden(true, animated: true)
+        }
 
         let singleTap = UITapGestureRecognizer(target: self, action: #selector(toggleNavigation))
         singleTap.numberOfTapsRequired = 1
@@ -31,28 +51,12 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
         scrollView.addGestureRecognizer(doubleTap)
 
         singleTap.require(toFail: doubleTap)
+    }
 
-        imageView.contentMode = UIViewContentMode.scaleAspectFit
-
-        // Use image object variable, or image in viewmodel
-        if image != nil
-        {
-            imageView.image = image
-        }
-        else
-        {
-            let properties = viewModel.properties
-            if let imagePath = properties["image"]
-            {
-                Nuke.loadImage(with: URL(string: imagePath)!, into: imageView)
-                image = imageView.image
-            }
-        }
-
-        if UIScreen.main.traitCollection.userInterfaceIdiom == .phone
-        {
-            navigationController?.setNavigationBarHidden(true, animated: true)
-        }
+    func runWaitAnimation()
+    {
+        // TODO: work out proper default system - look at working out duration
+        imageView.image = UIImage.animatedImageNamed(self.waitAnimationFileName!, duration: 3.0)
     }
 
     override func viewDidLayoutSubviews()
@@ -60,16 +64,16 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
         super.viewDidLayoutSubviews()
         if freshView
         {
-            fitView(size: scrollView.bounds.size)
+            scaleView(size: scrollView.bounds.size)
         }
     }
 
-    func fitView(size: CGSize)
+    func scaleView(size: CGSize)
     {
         scrollView.zoomScale = 1.0
-        if let image = image
+        if let image = self.imageView.image
         {
-            let proportionalSize =  image.size.proportionalSizing(to: size, contentMode: scrollView.contentMode)
+            let proportionalSize = image.size.proportionalSizing(to: size, contentMode: scrollView.contentMode)
             imageView.frame = CGRect(origin: CGPoint.zero, size: proportionalSize)
         }
 
@@ -83,13 +87,11 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
             zoom = min(widthRatio, heightRatio)
         case .scaleAspectFill:
             zoom = max(widthRatio, heightRatio)
-        case .top:
-            zoom = widthRatio
         default:
             zoom = min(widthRatio, heightRatio)
         }
 
-        scrollView.minimumZoomScale = zoom
+        scrollView.minimumZoomScale = min(widthRatio, heightRatio)
         scrollView.maximumZoomScale = zoom * 2
         scrollView.zoomScale = zoom
 
@@ -98,7 +100,7 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
 
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator)
     {
-        fitView(size: size)
+        scaleView(size: size)
         super.viewWillTransition(to: size, with: coordinator)
     }
 
@@ -128,6 +130,11 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
 
     func viewForZooming(in scrollView: UIScrollView) -> UIView?
     {
-        return imageView
+        return self.imageView
     }
+
+//    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView)
+//    {
+//
+//    }
 }
