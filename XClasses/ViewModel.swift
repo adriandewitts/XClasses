@@ -324,34 +324,31 @@ public class ViewModel: Object, ViewModelDelegate
     }
 
     // TODO: return wait flag
-    func streamFile(key: String = "default", progress: @escaping (_ temporyURL: URL) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in})
-    {
+    func streamFile(key: String = "default", progress: @escaping (_ temporyURL: URL) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in}) {
         let source = serverURL()
         let (localURL, exists) = fileURL()
 
-        if !exists
-        {
+        if !exists {
             Alamofire.download(source, to: { temp, response in
-                //DispatchQueue.main.async { progress(temp) }
-                progress(temp)
+                // Move these back to the main thread, else Realm will get the shits down the line.
+                // Assumes this is originally called from the main thread
+                DispatchQueue.main.async {
+                    progress(temp)
+                }
                 return (localURL, [.removePreviousFile, .createIntermediateDirectories])
             }).response { response in
-                //DispatchQueue.main.async
-                //{
-                    if response.error != nil
-                    {
+                DispatchQueue.main.async {
+                    if response.error != nil {
                         completion(response.destinationURL!)
                     }
-                    else
-                    {
+                    else {
                         //TODO: Humanise the error for display in modal
                         //error(response.error!)
                     }
-                //}
+                }
             }
         }
-        else
-        {
+        else {
             completion(localURL)
         }
     }

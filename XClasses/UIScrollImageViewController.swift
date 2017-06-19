@@ -64,34 +64,22 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
         super.viewDidLayoutSubviews()
         if freshView
         {
-            scaleView(size: scrollView.bounds.size)
+            resetZoom(at: scrollView.bounds.size)
         }
     }
 
-    func scaleView(size: CGSize)
-    {
+    func resetZoom(at size: CGSize) {
         scrollView.zoomScale = 1.0
-        if let image = imageView.image
-        {
-            let proportionalSize = image.size.proportionalSizing(to: size, contentMode: scrollView.contentMode)
-            imageView.frame = CGRect(origin: CGPoint.zero, size: proportionalSize)
+
+        guard let image = imageView.image else {
+            return
         }
 
-        let widthRatio = CGFloat(size.width / imageView.frame.size.width)
-        let heightRatio = CGFloat(size.height / imageView.frame.size.height)
-        var zoom: CGFloat = 0.0
+        let aspect: Aspect = (scrollView.contentMode == .scaleAspectFill ? .fill : .fit)
+        let (proportionalSize, zoom) = image.size.resizingAndScaling(to: size, with: aspect)
+        imageView.frame = CGRect(origin: CGPoint.zero, size: proportionalSize)
 
-        switch scrollView.contentMode
-        {
-        case .scaleAspectFit:
-            zoom = min(widthRatio, heightRatio)
-        case .scaleAspectFill:
-            zoom = max(widthRatio, heightRatio)
-        default:
-            zoom = min(widthRatio, heightRatio)
-        }
-
-        scrollView.minimumZoomScale = min(widthRatio, heightRatio)
+        scrollView.minimumZoomScale = zoom
         scrollView.maximumZoomScale = zoom * 2
         scrollView.zoomScale = zoom
 
@@ -100,7 +88,7 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
 
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator)
     {
-        scaleView(size: size)
+        resetZoom(at: size)
         super.viewWillTransition(to: size, with: coordinator)
     }
 
