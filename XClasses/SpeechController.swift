@@ -8,9 +8,9 @@
 import UIKit
 import Speech
 import AudioKit
+import AssistantKit
 
-class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, SFSpeechRecognitionTaskDelegate
-{
+class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, SFSpeechRecognitionTaskDelegate {
     let microphone: AKMicrophone
     let expander: AKExpander
     var speechRecognition: SFSpeechAudioBufferRecognitionRequest!
@@ -18,36 +18,30 @@ class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, 
 
     // MARK: Setup
 
-    override init()
-    {
+    override init() {
         AKSettings.audioInputEnabled = true
         AKSettings.sampleRate = 44100
         AKSettings.numberOfChannels = 1
         SpeechController.authoriseSpeech()
+        microphone = AKMicrophone()
+        expander = AKExpander(microphone)
 
         // Use front microphone or default
-        var device: AKDevice = AudioKit.inputDevices!.first!
-        for d in AudioKit.inputDevices!
-        {
-            if d.deviceID.contains("Front")
-            {
-                device = d
+        if Device.isDevice, var device: AKDevice = AudioKit.inputDevices?.first {
+            for d in AudioKit.inputDevices! {
+                if d.deviceID.contains("Front") {
+                    device = d
+                }
             }
+            try? microphone.setDevice(device)
         }
-
-        microphone = AKMicrophone()
-        try! microphone.setDevice(device)
-
-        expander = AKExpander(microphone)
-        //expander.
 
         super.init()
     }
 
-    func start(context: [String] = [], response: @escaping (_ transcription: String) -> Void)
-    {
+    func start(context: [String] = [], response: @escaping (_ transcription: String) -> Void) {
         self.response = response
-        prepareRecogniser(context: context)
+        configureRecogniser(context: context)
         microphone.avAudioNode.installTap(onBus: 0, bufferSize: 1024, format: AudioKit.format, block: { buffer, time in
             self.speechRecognition.append(buffer)
         })
@@ -55,8 +49,10 @@ class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, 
         AudioKit.start()
     }
 
-    func stop()
-    {
+    /**
+    Stops audio input and speech recognition
+    */
+    func stop() {
         AudioKit.stop()
         microphone.avAudioNode.removeTap(onBus: 0)
         speechRecognition.endAudio()
@@ -64,8 +60,7 @@ class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, 
 
     // TODO: Respond with human readable errors for authorisations
 
-    class func authoriseMicrophone()
-    {
+    class func authoriseMicrophone() {
         _ = AKMicrophone()
     }
 
@@ -85,9 +80,9 @@ class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, 
         }
     }
 
-    func prepareRecogniser(context: [String])
+    func configureRecogniser(context: [String] = [])
     {
-        // TODO: Get locale from current user settings
+        // TODO: Get locale from user settings
         let locale = NSLocale(localeIdentifier: "en_EN")
         let recogniser = SFSpeechRecognizer(locale: locale as Locale)!
 

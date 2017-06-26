@@ -122,10 +122,14 @@ public class ViewModel: Object, ViewModelDelegate
         return []
     }
 
-    // serverURL: gs:// url on google cloud storage
-    // localURL: path to url on device - is parsed to include id or clientid
-    // expiry: when file is deleted locally (in seconds)
-    // deleted on upload: as it says
+    /**
+    Override fileAttributes class method to map each remote to local file. Returns a dictionary with each mapped file.
+    - **bucket** The google bucket storage name
+    - **serverPath** The rest of the path of the folder within the bucket. Start with /
+    - **localURL** Path to local file
+    - **expiry** when file is deleted locally (in seconds)
+    - **deleteOnUpload** as it says
+    */
     class var fileAttributes: [String: FileModel]
     {
         return ["default": FileModel(bucket: "default", serverPath: "/{clientID}.png", localURL: "/{clientID}.png", expiry: 3600, deleteOnUpload: true)]
@@ -133,7 +137,7 @@ public class ViewModel: Object, ViewModelDelegate
 
     // End of overrides
 
-    // Prepares the model as a Dictionary, excluding prefixed underscored properties
+    /// Prepares the model as a Dictionary, excluding prefixed underscored properties
     func exportProperties() -> [String: String]
     {
         var properties = [String: String]()

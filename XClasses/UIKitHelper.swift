@@ -27,6 +27,14 @@ extension Device
             default:  return 2.0
         }
     }
+
+    static var isSimulator: Bool {
+        return ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"] != nil
+    }
+
+    static var isDevice: Bool {
+        return ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"] == nil
+    }
 }
 
 extension CGPDFDocument
@@ -58,6 +66,15 @@ extension CGPDFDocument
         }
 
         return page.getBoxRect(.mediaBox).size
+    }
+}
+
+extension CGRect {
+    mutating func expand(by: CGFloat) {
+        origin.x -= by
+        origin.y -= by
+        size.width += 2 * by
+        size.height += 2 * by
     }
 }
 
