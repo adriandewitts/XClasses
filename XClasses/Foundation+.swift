@@ -10,7 +10,7 @@ import Foundation
 
 extension String
 {
-    func snakeCase() -> String
+    func snakeCased() -> String
     {
         let pattern = "([a-z0-9])([A-Z])"
 
@@ -19,7 +19,7 @@ extension String
         return (regex?.stringByReplacingMatches(in: self, options: [], range: range, withTemplate: "$1_$2").lowercased())!
     }
 
-    func camelCase() -> String
+    func camelCased() -> String
     {
         let items = components(separatedBy: "_")
         var camelCase = ""
@@ -29,6 +29,15 @@ extension String
             camelCase += 0 == $0 ? $1 : $1.capitalized
         }
         return camelCase
+    }
+
+    func removedCharacters(with forbiddenChars: CharacterSet) -> String {
+        let passed = self.unicodeScalars.filter { !forbiddenChars.contains($0) }
+        return String(String.UnicodeScalarView(passed))
+    }
+
+    func removedCharacters(with: String) -> String {
+        return removedCharacters(with: CharacterSet(charactersIn: with))
     }
 }
 

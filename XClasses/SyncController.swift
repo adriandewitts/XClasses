@@ -208,7 +208,7 @@ public class SyncController
                                 let meta = l[0].components(separatedBy: "|")
                                 timestamp = Date.from(UTCString: meta[1])!
                                 let h = l[1].components(separatedBy: "|")
-                                let header = h.map { $0.camelCase() }
+                                let header = h.map { $0.camelCased() }
                                 let lines = l.dropFirst(2)
                                 let idIndex = header.index(of: "id")!
                                 for line in lines

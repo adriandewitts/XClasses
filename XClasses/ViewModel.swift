@@ -148,7 +148,7 @@ public class ViewModel: Object, ViewModelDelegate
             if !property.name.hasPrefix("_")
             {
                 let value = self.value(forKey: property.name)
-                let name = property.name.snakeCase()
+                let name = property.name.snakeCased()
                 if property.type != .date
                 {
                     properties[name] = String(describing: value!)
@@ -299,12 +299,13 @@ public class ViewModel: Object, ViewModelDelegate
 
         uploadTask.observe(.success) { snapshot in
             completion(localURL)
-            if self._sync == SyncStatus.download.rawValue
+            let realm = try! Realm()
+            let threadSafeSelf = realm.resolve(selfRef)!
+
+            if threadSafeSelf._sync == SyncStatus.download.rawValue
             {
-                if self._sync == SyncStatus.upload.rawValue
+                if threadSafeSelf._sync == SyncStatus.upload.rawValue
                 {
-                    let realm = try! Realm()
-                    let threadSafeSelf = realm.resolve(selfRef)!
                     try! realm.write {
                         threadSafeSelf._sync = SyncStatus.current.rawValue
                     }

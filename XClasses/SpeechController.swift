@@ -12,7 +12,7 @@ import AssistantKit
 
 class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, SFSpeechRecognitionTaskDelegate {
     let microphone: AKMicrophone
-    let expander: AKExpander
+    //let expander: AKExpander
     var speechRecognition: SFSpeechAudioBufferRecognitionRequest!
     var response: (_ transcription: String) -> Void = {_ in}
 
@@ -24,7 +24,7 @@ class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, 
         AKSettings.numberOfChannels = 1
         SpeechController.authoriseSpeech()
         microphone = AKMicrophone()
-        expander = AKExpander(microphone)
+        //expander = AKExpander(microphone)
 
         // Use front microphone or default
         if Device.isDevice, var device: AKDevice = AudioKit.inputDevices?.first {
