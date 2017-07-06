@@ -87,7 +87,7 @@ class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, 
         let recogniser = SFSpeechRecognizer(locale: locale as Locale)!
 
         speechRecognition = SFSpeechAudioBufferRecognitionRequest()
-        speechRecognition.taskHint = .dictation
+        speechRecognition.taskHint = .search
         speechRecognition.contextualStrings = context
 
         recogniser.recognitionTask(with: speechRecognition, delegate: self)

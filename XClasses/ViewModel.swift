@@ -13,6 +13,7 @@ import Firebase
 import FirebaseStorage
 import FileKit
 import Alamofire
+import SwiftyJSON
 
 protocol ViewModelDelegate
 {
@@ -169,7 +170,7 @@ public class ViewModel: Object, ViewModelDelegate
         return properties
     }
 
-    // Imports the data from the CSV and does the type casting that it needs to do
+    /// Imports the data from the CSV and does the type casting that it needs to do
     func importProperties(dictionary: [String: String], isNew: Bool)
     {
         let schemaProperties = objectSchema.properties
@@ -193,6 +194,14 @@ public class ViewModel: Object, ViewModelDelegate
                         self[property.name] = dictionary[property.name]!.lowercased() == "true"
                     case .date:
                         self[property.name] = Date.from(UTCString: dictionary[property.name]!)
+                    case .array:
+                        if property.objectClassName == "RealmString" {
+                            let array = dictionary[property.name]!.components(separatedBy: ",")
+                            let list = self[property.name] as! List<RealmString>
+                            for element in array {
+                                list.append(RealmString(stringValue: element))
+                            }
+                        }
                     default:
                         Analytics.logEvent("iOS Error", parameters: ["error": "Property type does not exist" as NSObject])
                     }
