@@ -7,10 +7,15 @@
 //
 
 import UIKit
+import Hydra
 
 protocol PDFPageDelegate {
     var _index: Int { get }
     var pdfDocument: PDFDocument { get }
+}
+
+enum PDFError: Error {
+    case pageNotReady
 }
 
 class PDFDocument {
@@ -23,29 +28,20 @@ class PDFDocument {
         cachedImages.countLimit = 5
     }
 
-    // PDF is streamed
-    func pdfPageImage(at index: Int, size: CGSize = UIScreen.main.bounds.size, error: @escaping (_ error: Error) -> Void = {_ in}, completion: @escaping (_ image: UIImage) -> Void = {_ in}) -> UIImage? {
-        cachePages(index: index, size: size)
 
-        if let image = cachedImages.object(forKey: NSNumber(value: index)) {
-            completion(image)
-            return image
+    func pdfPageImage(at index: Int, size: CGSize = UIScreen.main.bounds.size) -> Promise<UIImage> {
+        return Promise<UIImage>(in: .main) { resolve, reject in
+            self.cachePages(index: index, size: size)
+            if let image = self.cachedImages.object(forKey: NSNumber(value: index)) {
+                resolve(image)
+            }
+            else {
+                // Delay rejection so it can be retried periodically
+                Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { timer in
+                    reject(PDFError.pageNotReady)
+                }
+            }
         }
-
-        if firstRetry == nil {
-            firstRetry = Date()
-        }
-
-        if firstRetry!.timeIntervalSinceNow < TimeInterval(60.0) {
-            Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false, block: { timer in
-                _ = self.pdfPageImage(at: index, size: size, completion: completion)
-            })
-        }
-        else {
-            // TODO: Send back timeout error
-        }
-
-        return nil
     }
 
     func cachePages(index: Int, size: CGSize = UIScreen.main.bounds.size) {
@@ -60,7 +56,9 @@ class PDFDocument {
 
     func cachePage(index: Int, size: CGSize = UIScreen.main.bounds.size) {
         let n = NSNumber(value: index)
-        guard index >= 0, index < pdfDocument!.numberOfPages, cachedImages.object(forKey: n) == nil else {
+        let cachedImage = cachedImages.object(forKey: n)
+        // TODO: if Sizes are different then recache
+        guard index >= 0, index < pdfDocument!.numberOfPages, cachedImage == nil else {
             return
         }
 

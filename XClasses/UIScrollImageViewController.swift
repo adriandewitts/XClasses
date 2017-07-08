@@ -12,11 +12,9 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
 {
     @IBOutlet var scrollView: UIScrollView!
     @IBOutlet var imageView: UIImageView!
-    var freshView = true
     var waitAnimationFileName: String? = "Wait"
 
-    override func viewDidLoad()
-    {
+    override func viewDidLoad() {
         super.viewDidLoad()
 
         // Load in image from viewModel
@@ -24,6 +22,7 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
         if let imageURL = viewModel.properties["image"]
         {
             Nuke.loadImage(with: URL(string: imageURL)!, into: imageView)
+            //TODO: When loaded reset zoom
         }
 
         if waitAnimationFileName != nil && imageView.image == nil
@@ -32,8 +31,6 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
         }
 
         // Setup rest of ImageView with behaviours
-
-        imageView.contentMode = UIViewContentMode.scaleAspectFit
 
         if UIScreen.main.traitCollection.userInterfaceIdiom == .phone
         {
@@ -51,45 +48,39 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
         scrollView.addGestureRecognizer(doubleTap)
 
         singleTap.require(toFail: doubleTap)
+
+        //resetZoom(at: scrollView.bounds.size)
+    }
+
+//    override func viewWillAppear(_ animated: Bool) {
+//        super.viewWillAppear(animated)
+//        resetZoom(at: scrollView.bounds.size)
+//    }
+
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator)
+    {
+        super.viewWillTransition(to: size, with: coordinator)
+        resetZoom(at: size)
+    }
+
+    func resetZoom(at size: CGSize) {
+        guard let image = imageView.image else {
+            return
+        }
+
+        let aspect: Aspect = (scrollView.contentMode == .scaleAspectFill ? .fill : .fit)
+        let (proportionalSize, _) = image.size.resizingAndScaling(to: size, with: aspect)
+        imageView.frame = CGRect(origin: CGPoint.zero, size: proportionalSize)
+
+        scrollView.minimumZoomScale = 1.0
+        scrollView.maximumZoomScale = 2.0
+        scrollView.zoomScale = 1.0
     }
 
     func runWaitAnimation()
     {
         // TODO: work out proper default system - look at working out duration
         imageView.image = UIImage.animatedImageNamed(waitAnimationFileName!, duration: 3.0)
-    }
-
-    override func viewDidLayoutSubviews()
-    {
-        super.viewDidLayoutSubviews()
-        if freshView
-        {
-            resetZoom(at: scrollView.bounds.size)
-        }
-    }
-
-    func resetZoom(at size: CGSize) {
-        scrollView.zoomScale = 1.0
-
-        guard let image = imageView.image else {
-            return
-        }
-
-        let aspect: Aspect = (scrollView.contentMode == .scaleAspectFill ? .fill : .fit)
-        let (proportionalSize, zoom) = image.size.resizingAndScaling(to: size, with: aspect)
-        imageView.frame = CGRect(origin: CGPoint.zero, size: proportionalSize)
-
-        scrollView.minimumZoomScale = zoom
-        scrollView.maximumZoomScale = zoom * 2
-        scrollView.zoomScale = zoom
-
-        freshView = false
-    }
-
-    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator)
-    {
-        resetZoom(at: size)
-        super.viewWillTransition(to: size, with: coordinator)
     }
 
     // Gestures
@@ -120,9 +111,4 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
     {
         return imageView
     }
-
-//    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView)
-//    {
-//
-//    }
 }

@@ -13,7 +13,6 @@ import Firebase
 import FirebaseStorage
 import FileKit
 import Alamofire
-import SwiftyJSON
 
 protocol ViewModelDelegate
 {

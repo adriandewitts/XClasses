@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import Hydra
 
 class PDFViewController: UIScrollImageViewController
 {
@@ -35,12 +36,14 @@ class PDFViewController: UIScrollImageViewController
     {
         if let page = viewModel as? PDFPageDelegate
         {
-            let image = page.pdfDocument.pdfPageImage(at: page._index, size: size, error: { error in
-                // TODO: Show modal Timed out in own method
-            }, completion: { image in
+            page.pdfDocument.pdfPageImage(at: page._index, size: size).retry(20).then(in: .main) { image in
                 self.imageView.image = image
-            })
-            if image == nil
+                self.resetZoom(at: size)
+            }.catch { error in
+                // Warn problems with internet connection
+            }
+
+            if self.imageView.image == nil
             {
                 runWaitAnimation()
             }
