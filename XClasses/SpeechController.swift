@@ -12,7 +12,6 @@ import AssistantKit
 
 class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, SFSpeechRecognitionTaskDelegate {
     let microphone: AKMicrophone
-    //let expander: AKExpander
     var speechRecognition: SFSpeechAudioBufferRecognitionRequest!
     var response: (_ transcription: String) -> Void = {_ in}
 
@@ -24,7 +23,6 @@ class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, 
         AKSettings.numberOfChannels = 1
         SpeechController.authoriseSpeech()
         microphone = AKMicrophone()
-        //expander = AKExpander(microphone)
 
         // Use front microphone or default
         if Device.isDevice, var device: AKDevice = AudioKit.inputDevices?.first {
@@ -42,16 +40,14 @@ class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, 
     func start(context: [String] = [], response: @escaping (_ transcription: String) -> Void) {
         self.response = response
         configureRecogniser(context: context)
-        microphone.avAudioNode.installTap(onBus: 0, bufferSize: 1024, format: AudioKit.format, block: { buffer, time in
+        microphone.avAudioNode.installTap(onBus: 0, bufferSize: 1024, format: AudioKit.format) { buffer, time in
             self.speechRecognition.append(buffer)
-        })
+        }
 
         AudioKit.start()
     }
 
-    /**
-    Stops audio input and speech recognition
-    */
+    /// Stops audio input and speech recognition
     func stop() {
         AudioKit.stop()
         microphone.avAudioNode.removeTap(onBus: 0)
@@ -70,25 +66,29 @@ class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, 
             switch status {
             case .authorized:
                 print("Authorised")
+                // Do nothing
             case .denied:
                 print("User denied access to speech recognition")
+                // Modal
             case .notDetermined:
                 print("Speech recognition not yet authorized")
+                // Send error to logs
             case.restricted:
                 print("User Authorization Issue.")
+                // Send error to logs
             }
         }
     }
 
     func configureRecogniser(context: [String] = [])
     {
-        // TODO: Get locale from user settings
-        let locale = NSLocale(localeIdentifier: "en_EN")
-        let recogniser = SFSpeechRecognizer(locale: locale as Locale)!
-
+        // TODO: If locale language is different from book - set to en_EN
+        let recogniser = SFSpeechRecognizer(locale: Locale.current)!
         speechRecognition = SFSpeechAudioBufferRecognitionRequest()
         speechRecognition.taskHint = .search
-        speechRecognition.contextualStrings = context
+        if context.count > 0 {
+            speechRecognition.contextualStrings = context
+        }
 
         recogniser.recognitionTask(with: speechRecognition, delegate: self)
     }

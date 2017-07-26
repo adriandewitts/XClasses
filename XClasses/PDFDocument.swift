@@ -58,7 +58,7 @@ class PDFDocument {
         let n = NSNumber(value: index)
         let cachedImage = cachedImages.object(forKey: n)
         // TODO: if Sizes are different then recache
-        guard index >= 0, index < pdfDocument!.numberOfPages, cachedImage == nil else {
+        guard index >= 0, pdfDocument != nil, index < pdfDocument!.numberOfPages, cachedImage == nil else {
             return
         }
 

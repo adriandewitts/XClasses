@@ -104,3 +104,10 @@ extension CGPoint {
         return CGPoint(x: x * by, y: y * by)
     }
 }
+
+extension UIScrollView {
+    func scrollRectToVisibleCenteredOn(visibleRect: CGRect, contentRect: CGRect, animated: Bool) {
+        let centeredRect = CGRect(x: visibleRect.origin.x + (visibleRect.size.width / 2.0) - (contentRect.size.width / 2.0), y: visibleRect.origin.y + (visibleRect.size.height / 2.0) - (contentRect.size.height / 2.0), width: contentRect.size.width, height: contentRect.size.height)
+        scrollRectToVisible(centeredRect, animated: animated)
+    }
+}
