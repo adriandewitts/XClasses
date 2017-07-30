@@ -83,9 +83,9 @@ class SpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, 
     func configureRecogniser(context: [String] = [])
     {
         // TODO: If locale language is different from book - set to en_EN
-        let recogniser = SFSpeechRecognizer(locale: Locale.current)!
+        let recogniser = SFSpeechRecognizer()!
         speechRecognition = SFSpeechAudioBufferRecognitionRequest()
-        speechRecognition.taskHint = .search
+        speechRecognition.taskHint = .dictation
         if context.count > 0 {
             speechRecognition.contextualStrings = context
         }
