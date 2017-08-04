@@ -11,9 +11,13 @@ import Speech
 import AudioKit
 import AssistantKit
 
-class GoogleSpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate {
+class GoogleSpeechController: NSObject {
     let microphone: AKMicrophone
     var response: (_ transcription: String) -> Void = {_ in}
+    let host = "speech.googleapis.com"
+    var apiKey: String {
+        return "API_KEY"
+    }
 
     // MARK: Setup
 
@@ -21,7 +25,6 @@ class GoogleSpeechController: NSObject, AVCaptureAudioDataOutputSampleBufferDele
         AKSettings.audioInputEnabled = true
         AKSettings.sampleRate = 32000
         AKSettings.numberOfChannels = 1
-        SpeechController.authoriseSpeech()
         microphone = AKMicrophone()
 
         // Use front microphone or default
