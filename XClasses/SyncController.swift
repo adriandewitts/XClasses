@@ -135,7 +135,7 @@ public class SyncController
                                 else
                                 {
                                     // TODO: if 403 show login modal
-                                    E.log(error: "Server returned status code \(moyaResponse.statusCode)", from: self)
+                                    E.log(error: "Server returned status code \(moyaResponse.statusCode) while trying to write sync", from: self)
                                     Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                                 }
                             case let .failure(error):
@@ -223,23 +223,21 @@ public class SyncController
                                         dict[property] = components[index]
                                     }
 
-                                    let records = realm.objects(modelClass).filter(predicate)
-                                    if (dict["delete"] == nil) || (dict["delete"] != "true")
-                                    {
-                                        if records.count > 0
-                                        {
-                                            records.first!.importProperties(dictionary: dict, isNew:false)
+                                    let record = realm.objects(modelClass).filter(predicate).first
+                                    if (dict["delete"] == nil) || (dict["delete"] != "true") {
+                                        if record != nil {
+                                            record!.importProperties(dictionary: dict, isNew:false)
                                         }
-                                        else
-                                        {
+                                        else {
                                             let record = modelClass.init()
                                             record.importProperties(dictionary: dict, isNew: true)
                                         }
                                     }
-                                    else
-                                    {
+                                    else {
                                         try! realm.write {
-                                            realm.delete(records.first!)
+                                            if let record = record {
+                                                realm.delete(record)
+                                            }
                                         }
                                     }
                                 }
@@ -249,7 +247,7 @@ public class SyncController
                         else
                         {
                             // TODO: if 403 show login modal
-                            E.log(error: "Server returned status code \(moyaResponse.statusCode)")
+                            E.log(error: "Server returned status code \(moyaResponse.statusCode) while trying to read sync")
                             Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                         }
                     case let .failure(error):
