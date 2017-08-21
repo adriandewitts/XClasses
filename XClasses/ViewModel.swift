@@ -13,6 +13,7 @@ import Firebase
 import FirebaseStorage
 import FileKit
 import Alamofire
+import IGListKit
 
 protocol ViewModelDelegate
 {
@@ -66,7 +67,7 @@ struct FileModel
     let deleteOnUpload: Bool
 }
 
-public class ViewModel: Object, ViewModelDelegate
+public class ViewModel: Object, ViewModelDelegate, ListDiffable
 {
     static let tryAgain = 60.0
 
@@ -120,6 +121,18 @@ public class ViewModel: Object, ViewModelDelegate
     var relatedCollection: [ViewModelDelegate]
     {
         return []
+    }
+
+    // ListDiffable implementation
+    public func diffIdentifier() -> NSObjectProtocol {
+        return clientId as NSObjectProtocol
+    }
+
+    public func isEqual(toDiffableObject object: ListDiffable?) -> Bool {
+        if let object = object as? ViewModel {
+            return clientId == object.clientId
+        }
+        return false
     }
 
     /**
