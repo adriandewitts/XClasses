@@ -113,6 +113,11 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable
         return false
     }
 
+    class var writeOnly: Bool
+    {
+        return false
+    }
+
     var properties: [String: String]
     {
         return [:]

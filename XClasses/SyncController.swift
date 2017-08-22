@@ -192,6 +192,7 @@ public class SyncController
             var predicate = NSPredicate(format: "modelName = '\(model)' AND readLock < %@", minuteAgo as CVarArg)
             if let syncModel = realm.objects(SyncModel.self).filter(predicate).first
             {
+                // TODO: Check is write only
                 var timestamp = Date.distantPast
                 try! realm.write { syncModel.readLock = Date() }
 
