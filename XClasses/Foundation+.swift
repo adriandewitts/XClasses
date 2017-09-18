@@ -110,3 +110,10 @@ extension String
     }
 }
 
+class MutatingURL {
+    var url: URL
+
+    init(url: URL) {
+        self.url = url
+    }
+}

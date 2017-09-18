@@ -36,16 +36,19 @@ class PDFViewController: UIScrollImageViewController
     {
         if let page = viewModel as? PDFPageDelegate
         {
-            page.pdfDocument.pdfPageImage(at: page._index, size: size).retry(20).then(in: .main) { image in
+            waitAnimation()
+            
+            page.pdfDocument.pdfPageImage(at: page._index, size: size).retry(30) {_,_ in
+                // Wait for a second to try again
+                sleep(1)
+                return true
+            }.then(in: .main) { image in
                 self.imageView.image = image
                 self.resetZoom(at: size)
+                self.waitView?.removeFromSuperview()
+                self.waitView = nil
             }.catch { error in
-                // Warn problems with internet connection
-            }
-
-            if self.imageView.image == nil
-            {
-                runWaitAnimation()
+                self.presentAlert(error: error)
             }
         }
     }

@@ -19,24 +19,24 @@ enum WebService
 
 extension WebService: TargetType
 {
+    var headers: [String : String]? {
+        return ["Content-type": "application/csv"]
+    }
+
     // TODO: switch to db.bookbotkids.com when it has SSL
     var baseURL: URL { return URL(string: "https://db-dot-bookbot-162503.appspot.com")! }
     //var baseURL: URL { return URL(string: "http://localhost:8080")! }
 
 
-    var path: String
-    {
-        switch self
-        {
+    var path: String {
+        switch self {
             case .read(let version, let table, let view, _, _, _), .createAndUpdate(let version, let table, let view, _, _), .delete(let version, let table, let view, _, _):
                 return "/\(version)/\(table)/\(view)"
         }
     }
 
-    var method: Moya.Method
-    {
-        switch self
-        {
+    var method: Moya.Method {
+        switch self {
             case .read:
                 return .get
             case .createAndUpdate:
@@ -46,46 +46,24 @@ extension WebService: TargetType
         }
     }
 
-    var parameters: [String: Any]?
-    {
-        switch self
-        {
+    var task: Task {
+        switch self {
             case .read(_, _, _, let accessToken, let lastTimestamp, let predicate):
                 var dict = ["last_timestamp": lastTimestamp.toUTCString() as Any]
-                if accessToken != nil
-                {
+                if accessToken != nil {
                     dict["access_token"] = accessToken
                 }
-                if predicate != nil
-                {
+                if predicate != nil {
                     dict["predicate"] = predicate
                 }
-                return dict
+                return .requestParameters(parameters: dict, encoding: URLEncoding.queryString)
             case .createAndUpdate(_, _, _, let accessToken, let records), .delete(_, _, _, let accessToken, let records):
-                return ["access_token": accessToken, "records": records]
+                return .requestParameters(parameters: ["access_token": accessToken, "records": records], encoding: PipeEncoding.default)
         }
     }
 
-    var parameterEncoding: ParameterEncoding
-    {
-        switch self
-        {
-            case .read:
-                return URLEncoding.default
-            case .createAndUpdate, .delete:
-                return PipeEncoding.default
-        }
-    }
-
-    var sampleData: Data { return Data() }
-
-    var task: Task
-    {
-        switch self
-        {
-            case .read, .createAndUpdate, .delete:
-                return .request
-        }
+    var sampleData: Data {
+        return Data()
     }
 }
 

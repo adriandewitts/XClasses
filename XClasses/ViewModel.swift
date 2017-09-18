@@ -14,42 +14,36 @@ import FirebaseStorage
 import FileKit
 import Alamofire
 import IGListKit
+import Hydra
 
-protocol ViewModelDelegate
-{
+protocol ViewModelDelegate {
     var _index: Int { get set }
     var properties: [String: String]  { get }
     var relatedCollection: [ViewModelDelegate] { get }
 }
 
-class RealmString: Object
-{
+class RealmString: Object {
     dynamic var stringValue = ""
 
-    init(stringValue: String)
-    {
+    init(stringValue: String) {
         super.init()
         self.stringValue = stringValue
     }
     
-    required init(realm: RLMRealm, schema: RLMObjectSchema)
-    {
+    required init(realm: RLMRealm, schema: RLMObjectSchema) {
         super.init(realm: realm, schema: schema)
     }
     
-    required init()
-    {
+    required init() {
         super.init()
     }
     
-    required init(value: Any, schema: RLMSchema)
-    {
+    required init(value: Any, schema: RLMSchema) {
         super.init(value: value, schema: schema)
     }
 }
 
-enum SyncStatus: Int
-{
+enum SyncStatus: Int {
     case current
     case created
     case updated
@@ -58,8 +52,7 @@ enum SyncStatus: Int
     case download
 }
 
-struct FileModel
-{
+struct FileModel {
     let bucket: String
     let serverPath: String
     let localURL: String
@@ -67,8 +60,7 @@ struct FileModel
     let deleteOnUpload: Bool
 }
 
-public class ViewModel: Object, ViewModelDelegate, ListDiffable
-{
+public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     static let tryAgain = 60.0
 
     var _index: Int = 0 // Position on current list in memory
@@ -78,53 +70,43 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable
 
     // Mark: Override in subclass
 
-    override public class func primaryKey() -> String?
-    {
+    override public class func primaryKey() -> String? {
         return "clientId"
     }
 
-    override public class func indexedProperties() -> [String]
-    {
+    override public class func indexedProperties() -> [String] {
         return ["_sync", "id"]
     }
 
-    override public class func ignoredProperties() -> [String]
-    {
+    override public class func ignoredProperties() -> [String] {
         return ["_index"]
     }
 
-    class var table: String
-    {
+    class var table: String {
         return String(describing: self)
     }
 
-    class var tableVersion: Float
-    {
+    class var tableVersion: Float {
         return 1.0
     }
 
-    class var tableView: String
-    {
+    class var tableView: String {
         return "default"
     }
 
-    class var readOnly: Bool
-    {
+    class var readOnly: Bool {
         return false
     }
 
-    class var writeOnly: Bool
-    {
+    class var writeOnly: Bool {
         return false
     }
 
-    var properties: [String: String]
-    {
+    var properties: [String: String] {
         return [:]
     }
 
-    var relatedCollection: [ViewModelDelegate]
-    {
+    var relatedCollection: [ViewModelDelegate] {
         return []
     }
 
@@ -148,39 +130,32 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable
     - **expiry** when file is deleted locally (in seconds)
     - **deleteOnUpload** as it says
     */
-    class var fileAttributes: [String: FileModel]
-    {
+    class var fileAttributes: [String: FileModel] {
         return ["default": FileModel(bucket: "default", serverPath: "/{clientID}.png", localURL: "/{clientID}.png", expiry: 3600, deleteOnUpload: true)]
     }
 
     // End of overrides
 
     /// Prepares the model as a Dictionary, excluding prefixed underscored properties
-    func exportProperties() -> [String: String]
-    {
+    func exportProperties() -> [String: String] {
         var properties = [String: String]()
         let schemaProperties = objectSchema.properties
 
-        for property in schemaProperties
-        {
-            if !property.name.hasPrefix("_")
-            {
+        for property in schemaProperties {
+            if !property.name.hasPrefix("_") {
                 let value = self.value(forKey: property.name)
                 let name = property.name.snakeCased()
-                if property.type != .date
-                {
+                if property.type != .date {
                     properties[name] = String(describing: value!)
                 }
-                else
-                {
+                else {
                     let dateValue = value as! Date
                     properties[name] = dateValue.toUTCString()
                 }
             }
         }
 
-        if id == 0
-        {
+        if id == 0 {
             properties["id"] = ""
         }
 
@@ -220,7 +195,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable
                             }
                         }
                     default:
-                        Analytics.logEvent("iOS Error", parameters: ["error": "Property type does not exist" as NSObject])
+                        log(error: "Property type does not exist")
                     }
                 }
             }
@@ -254,54 +229,53 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable
         return URL(string: "https://storage.googleapis.com/" + fileAttributes.bucket + replaceOccurrence(of: fileAttributes.serverPath))!
     }
 
-    // TODO: return wait flag
-    func getFile(key: String = "default", progress: @escaping (_ progress: Progress) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in})
-    {
-        let (localURL, exists) = fileURL(forKey: key)
-        if !exists
-        {
-            let fileAttributes = type(of: self).fileAttributes[key]!
-            let localURL = Path(replaceOccurrence(of: fileAttributes.localURL)).url
-            let serverPath = replaceOccurrence(of: fileAttributes.serverPath)
-
-            let storage = Storage.storage(url: "gs://" + fileAttributes.bucket)
-            let storageRef = storage.reference(forURL: "gs://" + fileAttributes.bucket + serverPath)
-
-            let downloadTask = storageRef.write(toFile: localURL)
-
-            downloadTask.observe(.progress) { snapshot in
-                progress(snapshot.progress!)
-            }
-
-            let selfRef = ThreadSafeReference(to: self)
-
-            downloadTask.observe(.success) { snapshot in
-                completion(localURL)
-                if self._sync == SyncStatus.download.rawValue
-                {
-                    let realm = try! Realm()
-                    let threadSafeSelf = realm.resolve(selfRef)!
-                    try! realm.write {
-                        threadSafeSelf._sync = SyncStatus.current.rawValue
-                    }
-                }
-            }
-
-            // Errors shouldn't happen - so log it and try again in a minute
-            downloadTask.observe(.failure) { snapshot in
-                E.log(error: snapshot.error!)
-                Timer.scheduledTimer(withTimeInterval: ViewModel.tryAgain, repeats: false, block: { timer in
-                    self.getFile(key: key, progress: progress, completion: completion)
-                })
-                // TODO: will send back only errors that the user sees in a modal
-                error(snapshot.error!)
-            }
-        }
-        else
-        {
-            completion(localURL)
-        }
-    }
+//    func getFile(key: String = "default", progress: @escaping (_ progress: Progress) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in})
+//    {
+//        let (localURL, exists) = fileURL(forKey: key)
+//        if !exists
+//        {
+//            let fileAttributes = type(of: self).fileAttributes[key]!
+//            let localURL = Path(replaceOccurrence(of: fileAttributes.localURL)).url
+//            let serverPath = replaceOccurrence(of: fileAttributes.serverPath)
+//
+//            let storage = Storage.storage(url: "gs://" + fileAttributes.bucket)
+//            let storageRef = storage.reference(forURL: "gs://" + fileAttributes.bucket + serverPath)
+//
+//            let downloadTask = storageRef.write(toFile: localURL)
+//
+//            downloadTask.observe(.progress) { snapshot in
+//                progress(snapshot.progress!)
+//            }
+//
+//            let selfRef = ThreadSafeReference(to: self)
+//
+//            downloadTask.observe(.success) { snapshot in
+//                completion(localURL)
+//                if self._sync == SyncStatus.download.rawValue
+//                {
+//                    let realm = try! Realm()
+//                    let threadSafeSelf = realm.resolve(selfRef)!
+//                    try! realm.write {
+//                        threadSafeSelf._sync = SyncStatus.current.rawValue
+//                    }
+//                }
+//            }
+//
+//            // Errors shouldn't happen - so log it and try again in a minute
+//            downloadTask.observe(.failure) { snapshot in
+//                log(error: snapshot.error!.localizedDescription)
+//                Timer.scheduledTimer(withTimeInterval: ViewModel.tryAgain, repeats: false, block: { timer in
+//                    self.getFile(key: key, progress: progress, completion: completion)
+//                })
+//                // TODO: will send back only errors that the user sees in a modal
+//                error(snapshot.error!)
+//            }
+//        }
+//        else
+//        {
+//            completion(localURL)
+//        }
+//    }
 
     // TODO: return wait flag
     func putFile(key: String = "default", progress: @escaping (_ progress: Progress) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in})
@@ -345,7 +319,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable
 
         // Errors shouldn't happen - so log it and try again in a minute
         uploadTask.observe(.failure) { snapshot in
-            E.log(error: snapshot.error!)
+            log(error: snapshot.error!.localizedDescription)
             Timer.scheduledTimer(withTimeInterval: ViewModel.tryAgain, repeats: false, block: { timer in
                 self.putFile(key: key, progress: progress, completion: completion)
             })
@@ -354,35 +328,111 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable
         }
     }
 
-    // TODO: return wait flag
-    func streamFile(key: String = "default", progress: @escaping (_ temporyURL: URL) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in}) {
-        let source = serverURL()
-        let (localURL, exists) = fileURL()
+//    func streamFile(key: String = "default", progress: @escaping (_ temporyURL: URL) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in}) {
+//        let source = serverURL(forKey: key)
+//        let (localURL, exists) = fileURL()
+//
+//        if !exists {
+//            Alamofire.download(source, to: { temp, response in
+//                // Move these back to the main thread, else Realm will get the shits down the line.
+//                // Assumes this is originally called from the main thread
+//                DispatchQueue.main.async {
+//                    progress(temp)
+//                }
+//                return (localURL, [.removePreviousFile, .createIntermediateDirectories])
+//            }).response { response in
+//                DispatchQueue.main.async {
+//                    if response.error != nil {
+//                        completion(response.destinationURL!)
+//                    }
+//                    else {
+//                        //TODO: Humanise the error for display in modal
+//                        //error(response.error!)
+//                    }
+//                }
+//            }
+//        }
+//        else {
+//            completion(localURL)
+//        }
+//    }
 
-        if !exists {
-            Alamofire.download(source, to: { temp, response in
-                // Move these back to the main thread, else Realm will get the shits down the line.
-                // Assumes this is originally called from the main thread
-                DispatchQueue.main.async {
-                    progress(temp)
-                }
-                return (localURL, [.removePreviousFile, .createIntermediateDirectories])
-            }).response { response in
-                DispatchQueue.main.async {
-                    if response.error != nil {
+    // TODO: Add Progress to method, and track with Alamofire
+    func streamFile(key: String = "default", completion: @escaping (_ url: URL) -> Void = {_ in}) -> Promise<URL> {
+        let source = self.serverURL(forKey: key)
+        let (localURL, exists) = self.fileURL()
+        return Promise<URL>({ resolve, reject in
+            if !exists {
+                Alamofire.download(source, to: { temp, response in
+                    print("*** get temp")
+                    resolve(temp)
+                    return (localURL, [.removePreviousFile, .createIntermediateDirectories])
+                }).response { response in
+                    if response.error == nil {
+                        print("*** get complete file")
                         completion(response.destinationURL!)
                     }
                     else {
-                        //TODO: Humanise the error for display in modal
-                        //error(response.error!)
+                        log(error: response.error.debugDescription)
+                        reject(CommonError.networkConnectionError)
                     }
                 }
             }
-        }
-        else {
-            completion(localURL)
-        }
+            else {
+                resolve(localURL)
+            }
+        })
     }
+
+    // TODO: Add Progress to method
+    func getFile(key: String = "default") -> Promise<URL>
+    {
+        let selfRef = ThreadSafeReference(to: self)
+        let (localURL, exists) = self.fileURL(forKey: key)
+        return Promise<URL>(in: .background, { resolve, reject in
+            if !exists
+            {
+                let realm = try! Realm()
+                let threadSafeSelf = realm.resolve(selfRef)!
+                let fileAttributes = type(of: self).fileAttributes[key]!
+                let localURL = Path(threadSafeSelf.replaceOccurrence(of: fileAttributes.localURL)).url
+                let serverPath = threadSafeSelf.replaceOccurrence(of: fileAttributes.serverPath)
+
+                let storage = Storage.storage(url: "gs://" + fileAttributes.bucket)
+                let storageRef = storage.reference(forURL: "gs://" + fileAttributes.bucket + serverPath)
+
+                let downloadTask = storageRef.write(toFile: localURL)
+
+//                downloadTask.observe(.progress) { snapshot in
+//                    progress(snapshot.progress!)
+//                }
+
+                downloadTask.observe(.success) { snapshot in
+                    resolve(localURL)
+                    if self._sync == SyncStatus.download.rawValue
+                    {
+                        let realm = try! Realm()
+                        let threadSafeSelf = realm.resolve(selfRef)!
+                        try! realm.write {
+                            threadSafeSelf._sync = SyncStatus.current.rawValue
+                        }
+                    }
+                }
+
+                downloadTask.observe(.failure) { snapshot in
+                    log(error: snapshot.error!.localizedDescription)
+                    reject(CommonError.miscellaneousNetworkError)
+                }
+            }
+            else
+            {
+                resolve(localURL)
+            }
+        })
+    }
+
+//    resolve((data, response))
+//    reject("Image cannot be decoded")
 
 //    func syncFiles()
 //    {

@@ -12,7 +12,14 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
 {
     @IBOutlet var scrollView: UIScrollView!
     @IBOutlet var imageView: UIImageView!
-    var waitAnimationFileName: String? = "Wait"
+
+    // TODO: Better wait defaults
+    var waitAnimationFileName = "wait"
+    var waitAnimationDuration = 2.0
+    var waitView: UIImageView?
+    var waitViewRect: CGRect {
+        return CGRect(x: 0.0, y: 0.0, width: 50.0, height: 50.0)
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -25,10 +32,7 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
             //TODO: When loaded reset zoom
         }
 
-        if waitAnimationFileName != nil && imageView.image == nil
-        {
-            runWaitAnimation()
-        }
+        waitAnimation()
 
         // Setup rest of ImageView with behaviours
 
@@ -77,10 +81,19 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
         scrollView.zoomScale = 1.0
     }
 
-    func runWaitAnimation()
+    /// Setup wait animation centred in scrollview. Will wait 0.25 seconds to run and checks if image has already loaded.
+    func waitAnimation()
     {
-        // TODO: work out proper default system - look at working out duration
-        imageView.image = UIImage.animatedImageNamed(waitAnimationFileName!, duration: 3.0)
+        Timer.scheduledTimer(withTimeInterval: 0.25, repeats: false) { timer in
+            //TODO: Fix this - window is not set
+            if self.imageView.image == nil, self.waitView == nil, let applicationDelegate = UIApplication.shared.delegate as! AppDelegate?, let window = applicationDelegate.window {
+                self.waitView = UIImageView(frame: self.waitViewRect)
+                self.waitView?.center = window.convert(window.center, from: window)
+                self.scrollView.addSubview(self.waitView!)
+            }
+
+            self.waitView?.image = UIImage.animatedImageNamed(self.waitAnimationFileName, duration: self.waitAnimationDuration)
+        }
     }
 
     // Gestures

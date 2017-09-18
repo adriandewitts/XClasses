@@ -130,17 +130,17 @@ public class SyncController
                                             }
                                         }
                                     }
-                                    catch { E.log(error: "From writeSync: Response was impossibly incorrect", from: self) }
+                                    catch { log(error: "Response was impossibly incorrect") }
                                 }
                                 else
                                 {
                                     // TODO: if 403 show login modal
-                                    E.log(error: "Server returned status code \(moyaResponse.statusCode) while trying to write sync", from: self)
+                                    log(error: "Server returned status code \(moyaResponse.statusCode) while trying to write sync")
                                     Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                                 }
                             case let .failure(error):
                                 // TODO: If timer exists don't schedule another timer
-                                E.log(error: error, from: self)
+                                log(error: error.errorDescription!)
                                 Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                             }
                             //try! realm.write { syncModel.writeLock = Date.distantPast }
@@ -162,10 +162,10 @@ public class SyncController
                                     }
                                     else
                                     {
-                                        E.log(error: "Either user was trying to delete records they can't or something went wrong with the server")
+                                        log(error: "Either user was trying to delete records they can't or something went wrong with the server")
                                     }
                                 case let .failure(error):
-                                    E.log(error: error)
+                                    log(error: error.errorDescription!)
                                     Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                                 }
                                 //try! realm.write { syncModel.writeLock = Date.distantPast }
@@ -243,16 +243,16 @@ public class SyncController
                                     }
                                 }
                             }
-                            catch { E.log(error: "Response was impossibly incorrect") }
+                            catch { log(error: "Response was impossibly incorrect") }
                         }
                         else
                         {
                             // TODO: if 403 show login modal
-                            E.log(error: "Server returned status code \(moyaResponse.statusCode) while trying to read sync")
+                            log(error: "Server returned status code \(moyaResponse.statusCode) while trying to read sync")
                             Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                         }
                     case let .failure(error):
-                        E.log(error: "Server connectivity error\(error)")
+                        log(error: "Server connectivity error\(error.errorDescription)")
                         Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                     }
 
@@ -360,14 +360,4 @@ public class SyncController
 
     // TODO: will search on server and cache these queries in a different Realm DB
     // func directQuery(model: AnyClass, query: NSPredicate, order: String, controller: SyncControllerDelegate, freshness: Int = 3600) -> ([ViewModel], String)
-}
-
-public class E
-{
-    static func log(error: Any, from: Any? = nil)
-    {
-        //TODO: setup errors to go to Fabric
-        //FirebaseCrash.log("iOS Sync Error: \(error)");
-        print(error)
-    }
 }

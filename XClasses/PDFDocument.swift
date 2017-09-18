@@ -16,18 +16,29 @@ protocol PDFPageDelegate {
 
 enum PDFError: Error {
     case pageNotReady
+
+    var localizedDescription: String {
+        switch self {
+        case .pageNotReady:
+            return NSLocalizedString("Page is still downloading.", comment: "")
+        }
+    }
 }
 
 class PDFDocument {
     let cachedImages = NSCache<NSNumber, UIImage>()
+    let cacheImageCount = 5
     var pdfDocument: CGPDFDocument?
     var firstRetry: Date?
 
     init(url: URL) {
         pdfDocument = CGPDFDocument(url as CFURL)
-        cachedImages.countLimit = 5
+        cachedImages.countLimit = cacheImageCount
     }
 
+    init() {
+        cachedImages.countLimit = cacheImageCount
+    }
 
     func pdfPageImage(at index: Int, size: CGSize = UIScreen.main.bounds.size) -> Promise<UIImage> {
         return Promise<UIImage>(in: .main) { resolve, reject in
@@ -36,10 +47,11 @@ class PDFDocument {
                 resolve(image)
             }
             else {
+                reject(PDFError.pageNotReady)
                 // Delay rejection so it can be retried periodically
-                Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { timer in
-                    reject(PDFError.pageNotReady)
-                }
+//                Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { timer in
+//                    reject(PDFError.pageNotReady)
+//                }
             }
         }
     }
