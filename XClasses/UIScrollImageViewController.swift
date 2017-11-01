@@ -86,7 +86,7 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
     {
         Timer.scheduledTimer(withTimeInterval: 0.25, repeats: false) { timer in
             //TODO: Fix this - window is not set
-            if self.imageView.image == nil, self.waitView == nil, let applicationDelegate = UIApplication.shared.delegate as! AppDelegate?, let window = applicationDelegate.window {
+            if self.imageView.image == nil, self.waitView == nil, let window = UIApplication.shared.keyWindow {
                 self.waitView = UIImageView(frame: self.waitViewRect)
                 self.waitView?.center = window.convert(window.center, from: window)
                 self.scrollView.addSubview(self.waitView!)

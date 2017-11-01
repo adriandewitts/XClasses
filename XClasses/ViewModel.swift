@@ -65,7 +65,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 
     var _index: Int = 0 // Position on current list in memory
     dynamic var _sync = SyncStatus.created.rawValue // Record status for syncing
-    dynamic var id = 0 // Server ID - do not make primary key, as it gets locked
+    dynamic var id = 0 // Server ID - do not make primary key, as it is unchangeable
     dynamic var clientId = UUID().uuidString // Used to make sure records arent saved to the server DB multiple times
 
     // Mark: Override in subclass
@@ -94,11 +94,18 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return "default"
     }
 
-    class var readOnly: Bool {
+    /// Can read from server
+    class var read: Bool {
+        return true
+    }
+
+    /// Can write to server
+    class var write: Bool {
         return false
     }
 
-    class var writeOnly: Bool {
+    /// Needs authentication before reading or writing to server
+    class var authenticate: Bool {
         return false
     }
 
@@ -135,6 +142,28 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     }
 
     // End of overrides
+
+    class var count: Int {
+        let realm = try! Realm()
+        return realm.objects(self).count
+    }
+
+    class var empty: Bool {
+        return self.count == 0
+    }
+
+    /// Return results of query
+    class func find(query: NSPredicate? = nil, orderBy: String? = nil, orderAscending: Bool = false) -> Results<ViewModel> {
+        let realm = try! Realm()
+        var result = realm.objects(self)
+        if query != nil {
+            result = result.filter(query!)
+        }
+        if orderBy != nil {
+            result = result.sorted(byKeyPath: orderBy!, ascending: orderAscending)
+        }
+        return result
+    }
 
     /// Prepares the model as a Dictionary, excluding prefixed underscored properties
     func exportProperties() -> [String: String] {
@@ -175,17 +204,31 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
                 {
                     switch property.type {
                     case .string:
-                        self[property.name] = dictionary[property.name]!
+                        let value = dictionary[property.name]!
+                        if value != "" {
+                            self[property.name] = value
+                        }
                     case .int:
-                        self[property.name] = Int(dictionary[property.name]!)
+                        if let number = Int(dictionary[property.name]!) {
+                            self[property.name] = number
+                        }
                     case .float:
-                        self[property.name] = Float(dictionary[property.name]!)
+                        if let number = Float(dictionary[property.name]!) {
+                            self[property.name] = number
+                        }
                     case .double:
-                        self[property.name] = Double(dictionary[property.name]!)
+                        if let number = Double(dictionary[property.name]!) {
+                            self[property.name] = number
+                        }
                     case .bool:
-                        self[property.name] = dictionary[property.name]!.lowercased() == "true"
+                        let boolean = dictionary[property.name]!
+                        if boolean != "" {
+                            self[property.name] = boolean.lowercased() == "true"
+                        }
                     case .date:
-                        self[property.name] = Date.from(UTCString: dictionary[property.name]!)
+                        if let date = Date.from(UTCString: dictionary[property.name]!) {
+                            self[property.name] = date
+                        }
                     case .array:
                         if property.objectClassName == "RealmString" {
                             let array = dictionary[property.name]!.components(separatedBy: ",")
