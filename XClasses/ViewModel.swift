@@ -23,7 +23,7 @@ protocol ViewModelDelegate {
 }
 
 class RealmString: Object {
-    dynamic var stringValue = ""
+    @objc dynamic var stringValue = ""
 
     init(stringValue: String) {
         super.init()
@@ -64,9 +64,9 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     static let tryAgain = 60.0
 
     var _index: Int = 0 // Position on current list in memory
-    dynamic var _sync = SyncStatus.created.rawValue // Record status for syncing
-    dynamic var id = 0 // Server ID - do not make primary key, as it is unchangeable
-    dynamic var clientId = UUID().uuidString // Used to make sure records arent saved to the server DB multiple times
+    @objc dynamic var _sync = SyncStatus.created.rawValue // Record status for syncing
+    @objc dynamic var id = 0 // Server ID - do not make primary key, as it is unchangeable
+    @objc dynamic var clientId = UUID().uuidString // Used to make sure records arent saved to the server DB multiple times
 
     // Mark: Override in subclass
 
@@ -229,7 +229,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
                         if let date = Date.from(UTCString: dictionary[property.name]!) {
                             self[property.name] = date
                         }
-                    case .array:
+                    case .linkingObjects:
                         if property.objectClassName == "RealmString" {
                             let array = dictionary[property.name]!.components(separatedBy: ",")
                             let list = self[property.name] as! List<RealmString>
@@ -404,7 +404,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     func streamFile(key: String = "default", completion: @escaping (_ url: URL) -> Void = {_ in}) -> Promise<URL> {
         let source = self.serverURL(forKey: key)
         let (localURL, exists) = self.fileURL()
-        return Promise<URL>({ resolve, reject in
+        return Promise<URL>({ resolve, reject, _ in
             if !exists {
                 Alamofire.download(source, to: { temp, response in
                     print("*** get temp")
@@ -432,7 +432,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     {
         let selfRef = ThreadSafeReference(to: self)
         let (localURL, exists) = self.fileURL(forKey: key)
-        return Promise<URL>(in: .background, { resolve, reject in
+        return Promise<URL>(in: .background, { resolve, reject, _ in
             if !exists
             {
                 let realm = try! Realm()

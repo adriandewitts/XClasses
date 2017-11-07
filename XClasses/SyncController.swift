@@ -16,10 +16,10 @@ import Hydra
 /// Sync model stores meta data for each model
 public class SyncModel: Object
 {
-    dynamic var modelName = ""
-    dynamic var serverSync = Date.distantPast // Server timestamp of last server sync. To be used on next sync request
-    dynamic var readLock = Date.distantPast
-    dynamic var writeLock = Date.distantPast
+    @objc dynamic var modelName = ""
+    @objc dynamic var serverSync = Date.distantPast // Server timestamp of last server sync. To be used on next sync request
+    @objc dynamic var readLock = Date.distantPast
+    @objc dynamic var writeLock = Date.distantPast
 }
 
 public class SyncController
@@ -58,7 +58,7 @@ public class SyncController
 
     /// Token will get the user token and return this as a Promise
     func token() -> Promise<String> {
-        return Promise<String> { resolve, reject in
+        return Promise<String> { resolve, reject, _ in
             guard let user = Auth.auth().currentUser else {
                 log(error: "User has not authenticated")
                 reject(CommonError.authenticationError)
@@ -83,11 +83,11 @@ public class SyncController
         token().then(in: .utility) { token in
             for model in models {
                 self.writeSync(model: model, token: token)
-                self.readSync(model: model, token: token).then {}
+                self.readSync(model: model, token: token).then(in: .utility) {}
             }
         }.catch() { error in
             for model in models {
-                self.readSync(model: model, token: nil).then {}
+                self.readSync(model: model, token: nil).then(in: .utility) {}
                 // Never has write sync because write needs to be authenticated
             }
         }
@@ -95,7 +95,7 @@ public class SyncController
 
     /// Instead of responding with a Promise of results, instead return the sync is ready. The reason for this is that it is more code to move the Realm response over the thread
     func syncReady(model: ViewModel.Type, freshness: Double = 600.0, timeout: Double = 10.0) -> Promise<Void> {
-        return Promise<Void> { resolve, reject in
+        return Promise<Void> { resolve, reject, _ in
             let realm = try! Realm()
             guard let syncModel = realm.objects(SyncModel.self).filter(NSPredicate(format: "modelName = '\(model)'")).first else {
                 reject(CommonError.unexpectedError)
@@ -104,11 +104,11 @@ public class SyncController
 
             let interval = syncModel.serverSync.timeIntervalSince(Date())
             if interval < freshness && !model.empty {
-                resolve()
+                resolve(Void())
             }
 
-            self.retrySync(model: model).timeout(in: .userInitiated, timeout: timeout, error: CommonError.timeoutError).then() {
-                resolve()
+            self.retrySync(model: model).timeout(in: .userInitiated, timeout: timeout, error: CommonError.timeoutError).then() { _ in
+                resolve(Void())
             }.catch() { error in
                 reject(error)
             }
@@ -118,16 +118,16 @@ public class SyncController
     /// Read sync will get token, and retry the sync
     func retrySync(model: ViewModel.Type) -> Promise<Void>
     {
-        return Promise<Void> { resolve, reject in
+        return Promise<Void> { resolve, reject, _ in
             self.token().then() { token in
-                self.readSync(model: model, token: token).retry(SyncController.retries) {_,_ in sleep(SyncController.retrySleep); return true }.then {
-                    resolve()
+                self.readSync(model: model, token: token, qos: .userInitiated).retry(SyncController.retries) {_,_ in sleep(SyncController.retrySleep); return true }.then { _ in
+                    resolve(Void())
                 }.catch { error in
                     reject(error)
                 }
             }.catch() { _ in
-                self.readSync(model: model, token: nil).retry(SyncController.retries) {_,_ in sleep(SyncController.retrySleep); return true }.then {
-                    resolve()
+                self.readSync(model: model, token: nil, qos: .userInitiated).retry(SyncController.retries) {_,_ in sleep(SyncController.retrySleep); return true }.then { _ in
+                    resolve(Void())
                 }.catch { error in
                     reject(error)
                 }
@@ -136,10 +136,11 @@ public class SyncController
     }
 
     /// Read sync make a request to the web service and stores new record to the local DB. Will also delete record marked for deletion
-    func readSync(model: ViewModel.Type, token: String? = nil) -> Promise<Void> {
-        return Promise<Void> { resolve, reject in
+    func readSync(model: ViewModel.Type, token: String? = nil, qos: DispatchQoS.QoSClass = .utility) -> Promise<Void> {
+        return Promise<Void> { resolve, reject, _ in
             let realm = try! Realm()
-            let provider = MoyaProvider<WebService>()//plugins: [NetworkLoggerPlugin(verbose: true)])
+
+            let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos))//plugins: [NetworkLoggerPlugin(verbose: true)])
 
             let modelClass = model
             let model = "\(model)"
@@ -230,16 +231,16 @@ public class SyncController
                     safeSyncModel.readLock = Date.distantPast
                     safeSyncModel.serverSync = timestamp
                 }
-                resolve()
+                resolve(Void())
             }
         }
     }
 
     //TODO: Clean up
-    func writeSync(model: ViewModel.Type, token: String)
+    func writeSync(model: ViewModel.Type, token: String, qos: DispatchQoS.QoSClass = .utility)
     {
         let realm = try! Realm()
-        let provider = MoyaProvider<WebService>()
+        let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos))
 
         let modelClass = model
         let model = "\(model)"

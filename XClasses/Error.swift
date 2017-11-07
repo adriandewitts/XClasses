@@ -39,12 +39,19 @@ enum CommonError: LocalizedError {
     }
 }
 
-extension UIViewController {
+protocol AlertDelegate {
+    func presentAlert(error: Error)
+    func alertAction()
+}
+
+extension AlertDelegate {
     func presentAlert(error: Error) {
         let alert = UIAlertController(title: NSLocalizedString("Alert", comment: "Title to alert user of problem"), message: error.localizedDescription, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: ""), style: .`default`))
-        present(alert, animated: true) {
-            self.alertAction()
+        if let viewController = self as? UIViewController {
+            viewController.present(alert, animated: true) {
+                self.alertAction()
+            }
         }
     }
 

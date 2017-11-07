@@ -15,12 +15,13 @@ class CollectionViewController: UIViewController, ViewModelManagerDelegate {
     var viewModelCollection: [ViewModelDelegate] = []
     var reuseIdentifier = "Cell"
 
+    @IBOutlet var waitView: UIImageView?
     @IBOutlet var collectionView: UICollectionView!
     class var workingRange: Int {
         return 3
     }
     lazy var adapter: ListAdapter = {
-        return ListAdapter(updater: ListAdapterUpdater(), viewController: self, workingRangeSize: workingRange)
+        return ListAdapter(updater: ListAdapterUpdater(), viewController: self, workingRangeSize: CollectionViewController.workingRange)
     }()
 
     override func viewDidLoad() {
@@ -31,24 +32,20 @@ class CollectionViewController: UIViewController, ViewModelManagerDelegate {
 
         adapter.collectionView = collectionView
         adapter.dataSource = self as ListAdapterDataSource
+
+        if viewModelCollection.count == 0, let waitView = waitView {
+            Timer.scheduledTimer(withTimeInterval: 0.25, repeats: false) { timer in
+                waitView.isHidden = false
+            }
+        }
+
+        // TODO: track object notifications and then update collection view
     }
 
     override func prepare(for segue: UIStoryboardSegue, sender: Any?)
     {
         XUIFlowController.sharedInstance.viewModel = (sender as! CollectionViewCell).viewModel
     }
-}
-
-extension CollectionViewController: ListAdapterDataSource {
-    func objects(for listAdapter: ListAdapter) -> [ListDiffable] {
-        return viewModelCollection as! [ListDiffable]
-    }
-
-    func listAdapter(_ listAdapter: ListAdapter, sectionControllerFor object: Any) -> ListSectionController {
-        return DefaultSectionController(viewModel: object as! ViewModel, standardSize: self.standardCellSize())
-    }
-
-    func emptyView(for listAdapter: ListAdapter) -> UIView? { return nil }
 
     // TODO: think this default out
     func standardCellSize() -> CGSize
@@ -63,6 +60,21 @@ extension CollectionViewController: ListAdapterDataSource {
         let cellWidth = (screenWidth / numberOfCells) - minimumCellSpacing
 
         return CGSize(width: cellWidth, height: cellWidth * aspectRatio)
+    }
+}
+
+extension CollectionViewController: ListAdapterDataSource {
+    func objects(for listAdapter: ListAdapter) -> [ListDiffable] {
+        return viewModelCollection as! [ListDiffable]
+    }
+
+    func listAdapter(_ listAdapter: ListAdapter, sectionControllerFor object: Any) -> ListSectionController {
+        return DefaultSectionController(viewModel: object as! ViewModel, standardSize: self.standardCellSize())
+    }
+
+    func emptyView(for listAdapter: ListAdapter) -> UIView? {
+        //self.waitView?.image = UIImage.animatedImageNamed(waitAnimationFileName, duration: waitAnimationDuration)
+        return waitView
     }
 }
 

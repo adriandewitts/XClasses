@@ -98,12 +98,12 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
 
     // Gestures
 
-    func toggleNavigation(tapGesture: UITapGestureRecognizer)
+    @objc func toggleNavigation(tapGesture: UITapGestureRecognizer)
     {
         navigationController?.setNavigationBarHidden(navigationController?.isNavigationBarHidden == false, animated: true)
     }
 
-    func zoomView(tapGesture: UITapGestureRecognizer)
+    @objc func zoomView(tapGesture: UITapGestureRecognizer)
     {
         if (scrollView.zoomScale == scrollView.minimumZoomScale)
         {

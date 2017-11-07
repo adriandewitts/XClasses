@@ -9,7 +9,7 @@
 import UIKit
 import Hydra
 
-class PDFViewController: UIScrollImageViewController
+class PDFViewController: UIScrollImageViewController, AlertDelegate
 {
     override func viewDidLoad()
     {
