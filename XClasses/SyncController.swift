@@ -40,6 +40,8 @@ public class SyncController
                 try! realm.write { realm.add(SyncModel(value: ["modelName": model])) }
             }
         }
+
+        // TODO: Remove deleted objects from tables
     }
 
     /// Configure file will create needed folders to store synced files
@@ -211,7 +213,7 @@ public class SyncController
                             else {
                                 try! realm.write {
                                     if let record = record {
-                                        realm.delete(record)
+                                        record.deleted = true
                                     }
                                 }
                             }

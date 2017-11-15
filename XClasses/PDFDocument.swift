@@ -10,7 +10,7 @@ import UIKit
 import Hydra
 
 protocol PDFPageDelegate {
-    var _index: Int { get }
+    var pageNumber: Int { get }
     var pdfDocument: PDFDocument { get }
 }
 
@@ -40,10 +40,10 @@ class PDFDocument {
         cachedImages.countLimit = cacheImageCount
     }
 
-    func pdfPageImage(at index: Int, size: CGSize = UIScreen.main.bounds.size) -> Promise<UIImage> {
+    func pdfPageImage(pageNumber: Int, size: CGSize = UIScreen.main.bounds.size) -> Promise<UIImage> {
         return Promise<UIImage>(in: .main) { resolve, reject, _ in
-            self.cachePages(index: index, size: size)
-            if let image = self.cachedImages.object(forKey: NSNumber(value: index)) {
+            self.cachePages(pageNumber: pageNumber, size: size)
+            if let image = self.cachedImages.object(forKey: NSNumber(value: pageNumber)) {
                 resolve(image)
             }
             else {
@@ -56,25 +56,25 @@ class PDFDocument {
         }
     }
 
-    func cachePages(index: Int, size: CGSize = UIScreen.main.bounds.size) {
-        cachePage(index: index, size: size)
+    func cachePages(pageNumber: Int, size: CGSize = UIScreen.main.bounds.size) {
+        cachePage(pageNumber: pageNumber, size: size)
         
         let queue = DispatchQueue(label: "caching")
         queue.async {
-            self.cachePage(index: index + 1, size: size)
-            self.cachePage(index: index - 1, size: size)
+            self.cachePage(pageNumber: pageNumber + 1, size: size)
+            self.cachePage(pageNumber: pageNumber - 1, size: size)
         }
     }
 
-    func cachePage(index: Int, size: CGSize = UIScreen.main.bounds.size) {
-        let n = NSNumber(value: index)
+    func cachePage(pageNumber: Int, size: CGSize = UIScreen.main.bounds.size) {
+        let n = NSNumber(value: pageNumber)
         let cachedImage = cachedImages.object(forKey: n)
         // TODO: if Sizes are different then recache
-        guard index >= 0, pdfDocument != nil, index < pdfDocument!.numberOfPages, cachedImage == nil else {
+        guard pageNumber >= 1, pdfDocument != nil, pageNumber <= pdfDocument!.numberOfPages, cachedImage == nil else {
             return
         }
 
-        if let image = pdfDocument?.imageFromPage(number: index + 1, with: size) {
+        if let image = pdfDocument?.imageFromPage(number: pageNumber, with: size) {
             cachedImages.setObject(image, forKey: n)
         }
     }

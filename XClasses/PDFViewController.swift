@@ -38,7 +38,7 @@ class PDFViewController: UIScrollImageViewController, AlertDelegate
         {
             waitAnimation()
             
-            page.pdfDocument.pdfPageImage(at: page._index, size: size).retry(30) {_,_ in
+            page.pdfDocument.pdfPageImage(pageNumber: page.pageNumber, size: size).retry(30) {_,_ in
                 // Wait for a second to try again
                 sleep(1)
                 return true

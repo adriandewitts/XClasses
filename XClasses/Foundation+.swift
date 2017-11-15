@@ -15,7 +15,7 @@ extension String
         let pattern = "([a-z0-9])([A-Z])"
 
         let regex = try? NSRegularExpression(pattern: pattern, options: [])
-        let range = NSRange(location: 0, length: characters.count)
+        let range = NSRange(location: 0, length: self.count)
         return (regex?.stringByReplacingMatches(in: self, options: [], range: range, withTemplate: "$1_$2").lowercased())!
     }
 
@@ -60,7 +60,7 @@ extension Date
     }
 }
 
-extension Collection where Indices.Iterator.Element == Index
+extension Collection
 {
     // Returns the element at the specified index if it is within bounds, otherwise nil.
     subscript (safe index: Index) -> Iterator.Element? {

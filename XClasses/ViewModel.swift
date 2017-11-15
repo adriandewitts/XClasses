@@ -17,9 +17,8 @@ import IGListKit
 import Hydra
 
 protocol ViewModelDelegate {
-    var _index: Int { get set }
     var properties: [String: String]  { get }
-    var relatedCollection: [ViewModelDelegate] { get }
+    var relatedCollection: Any { get }
 }
 
 class RealmString: Object {
@@ -63,10 +62,10 @@ struct FileModel {
 public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     static let tryAgain = 60.0
 
-    var _index: Int = 0 // Position on current list in memory
     @objc dynamic var _sync = SyncStatus.created.rawValue // Record status for syncing
     @objc dynamic var id = 0 // Server ID - do not make primary key, as it is unchangeable
-    @objc dynamic var clientId = UUID().uuidString // Used to make sure records arent saved to the server DB multiple times
+    @objc dynamic var clientId = UUID().uuidString // Used to make sure records aren't saved to the server DB multiple times
+    @objc dynamic var deleted = false
 
     // Mark: Override in subclass
 
@@ -113,8 +112,9 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return [:]
     }
 
-    var relatedCollection: [ViewModelDelegate] {
-        return []
+    var relatedCollection: Any {
+        let realm = try! Realm()
+        return realm.objects(ViewModel.self)
     }
 
     // ListDiffable implementation
@@ -155,7 +155,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     /// Return results of query
     class func find(query: NSPredicate? = nil, orderBy: String? = nil, orderAscending: Bool = false) -> Results<ViewModel> {
         let realm = try! Realm()
-        var result = realm.objects(self)
+        var result = realm.objects(self).filter(NSPredicate(format: "deleted = false"))
         if query != nil {
             result = result.filter(query!)
         }
@@ -509,7 +509,6 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return replacement.replacingOccurrences(of: "{uid}", with: SyncController.sharedInstance.uid)
     }
 }
-
 
 
 // TODO: Record cleanup - periodically - when a certain age

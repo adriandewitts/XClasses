@@ -9,37 +9,43 @@
 import UIKit
 import IGListKit
 import Nuke
+import RealmSwift
 
-class CollectionViewController: UIViewController, ViewModelManagerDelegate {
-    var viewModel = ViewModel() as ViewModelDelegate
-    var viewModelCollection: [ViewModelDelegate] = []
-    var reuseIdentifier = "Cell"
+//TODO: Autolayout for cells. At the moment we calculate the size
 
-    @IBOutlet var waitView: UIImageView?
+class CollectionViewController: UIViewController, ListAdapterDataSource, ListWorkingRangeDelegate, ViewModelManagerDelegate {
+    @IBOutlet var emptyView: UIView?
     @IBOutlet var collectionView: UICollectionView!
-    class var workingRange: Int {
-        return 3
-    }
+    var viewModel = ViewModel() as ViewModelDelegate
+    var viewModelCollection: Array<ViewModelDelegate> = []
+    var notificationToken: NotificationToken? = nil
+    var reuseIdentifier: String { return "Cell" }
+    var workingRange: Int { return 20 }
     lazy var adapter: ListAdapter = {
-        return ListAdapter(updater: ListAdapterUpdater(), viewController: self, workingRangeSize: CollectionViewController.workingRange)
+        return ListAdapter(updater: ListAdapterUpdater(), viewController: self, workingRangeSize: workingRange)
     }()
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
         viewModel = pullViewModel(viewModel: viewModel)
-        viewModelCollection = viewModel.relatedCollection
 
         adapter.collectionView = collectionView
         adapter.dataSource = self as ListAdapterDataSource
 
-        if viewModelCollection.count == 0, let waitView = waitView {
-            Timer.scheduledTimer(withTimeInterval: 0.25, repeats: false) { timer in
-                waitView.isHidden = false
+        if let relatedRealmCollection = viewModel.relatedCollection as? Results<ViewModel> {
+            notificationToken = relatedRealmCollection.observe { changes in
+                switch changes {
+                case .initial, .update:
+                    self.viewModelCollection = Array(relatedRealmCollection)
+                    self.adapter.performUpdates(animated: true)
+                case .error(let error):
+                    log(error: error as! String)
+                }
             }
+        } else if viewModel.relatedCollection is Array<ViewModelDelegate> {
+            viewModelCollection = viewModel.relatedCollection as! Array<ViewModelDelegate>
         }
-
-        // TODO: track object notifications and then update collection view
     }
 
     override func prepare(for segue: UIStoryboardSegue, sender: Any?)
@@ -47,49 +53,82 @@ class CollectionViewController: UIViewController, ViewModelManagerDelegate {
         XUIFlowController.sharedInstance.viewModel = (sender as! CollectionViewCell).viewModel
     }
 
-    // TODO: think this default out
-    func standardCellSize() -> CGSize
-    {
-        let preferredCellWidth: CGFloat = 90.0
-        let aspectRatio: CGFloat = 1.0
-        let leftInset: CGFloat = 0.0
-        let rightInset: CGFloat = 0.0
-        let minimumCellSpacing: CGFloat = 0.0
-        let screenWidth = screenSize().width - leftInset - rightInset
-        let numberOfCells = floor(screenWidth / (preferredCellWidth + minimumCellSpacing))
-        let cellWidth = (screenWidth / numberOfCells) - minimumCellSpacing
-
-        return CGSize(width: cellWidth, height: cellWidth * aspectRatio)
-    }
-}
-
-extension CollectionViewController: ListAdapterDataSource {
     func objects(for listAdapter: ListAdapter) -> [ListDiffable] {
         return viewModelCollection as! [ListDiffable]
     }
 
     func listAdapter(_ listAdapter: ListAdapter, sectionControllerFor object: Any) -> ListSectionController {
-        return DefaultSectionController(viewModel: object as! ViewModel, standardSize: self.standardCellSize())
+        return DefaultSectionController(viewModel: object as! ViewModel)
     }
 
     func emptyView(for listAdapter: ListAdapter) -> UIView? {
-        //self.waitView?.image = UIImage.animatedImageNamed(waitAnimationFileName, duration: waitAnimationDuration)
-        return waitView
+        return emptyView
     }
+
+    func listAdapter(_ listAdapter: ListAdapter, sectionControllerWillEnterWorkingRange sectionController: ListSectionController) {
+        // TODO: Warm up images
+    }
+
+    func listAdapter(_ listAdapter: ListAdapter, sectionControllerDidExitWorkingRange sectionController: ListSectionController) {
+        // Nothing to do
+    }
+}
+
+enum Axis {
+    case x, y
 }
 
 class DefaultSectionController: ListSectionController {
     var viewModel: ViewModelDelegate
-    var standardSize = CGSize()
 
-    init(viewModel: ViewModel, standardSize: CGSize) {
+    // Sets which axis is a constant (the other axis will be variable)
+    var lockAxis: Axis { return .x }
+    // Changes the cell size to fit on the width or height of the collection view
+    var fitToAxis: Bool { return true }
+    var sectionInset: UIEdgeInsets { return UIEdgeInsetsMake(10.0, 10.0, 10.0, 10.0) }
+    var preferredCellSize: CGSize { return CGSize(width: 150.0, height: 150.0) }
+
+    init(viewModel: ViewModel) {
         self.viewModel = viewModel
-        self.standardSize = standardSize
         super.init()
+
+//        let collectionViewController = viewController as! CollectionViewController
+//        let flowLayout = collectionViewController.collectionView.collectionViewLayout as! ListCollectionViewLayout
+        self.inset = sectionInset
     }
 
     override func sizeForItem(at index: Int) -> CGSize {
-        return standardSize
+        let collectionViewController = viewController as! CollectionViewController
+        let collectionViewSize = collectionViewController.collectionView.bounds.size
+
+        var cellSize = preferredCellSize
+
+        if fitToAxis {
+            var resizer: CGFloat = 0.0
+
+            if lockAxis == .x {
+                let spacing = sectionInset.left + sectionInset.right
+                let cellAndSpacingWidth = preferredCellSize.width + spacing
+                let numberOfCells = floor(collectionViewSize.width / cellAndSpacingWidth)
+                let widthSansSpacing = collectionViewSize.width - (spacing * numberOfCells)
+                let widthCells = preferredCellSize.width * numberOfCells
+                resizer = widthSansSpacing / widthCells
+
+            }
+            else if lockAxis == .y {
+                let spacing = sectionInset.top + sectionInset.bottom
+                let cellAndSpacingHeight = preferredCellSize.height + spacing
+                let numberOfCells = floor(collectionViewSize.height / cellAndSpacingHeight)
+                let heightSansSpacing = collectionViewSize.height - (spacing * numberOfCells)
+                let heightCells = preferredCellSize.height * numberOfCells
+                resizer = heightSansSpacing / heightCells
+            }
+
+            cellSize.width = preferredCellSize.width * resizer
+            cellSize.height = preferredCellSize.height * resizer
+        }
+
+        return cellSize
     }
 
     override func cellForItem(at index: Int) -> UICollectionViewCell {

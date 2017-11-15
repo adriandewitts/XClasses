@@ -8,64 +8,60 @@
 
 import UIKit
 
+// TODO: Depracate and move to CollectionView
+
 class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSource, UIPageViewControllerDelegate, ViewModelManagerDelegate
 {
     var viewModel = ViewModel() as ViewModelDelegate
     var viewModelCollection: [ViewModelDelegate] = []
     var pageControllerStoryBoardID = "ScrollImageViewID"
 
-    override func viewDidLoad()
-    {
+    override func viewDidLoad() {
         super.viewDidLoad()
 
         dataSource = self
         delegate = self
 
         viewModel = pullViewModel(viewModel: viewModel)
-        viewModelCollection = viewModel.relatedCollection
+        viewModelCollection = viewModel.relatedCollection as! Array<ViewModelDelegate>
 
-        var index = 0
-        if let indexAsString = viewModel.properties["index"]
-        {
-            index = Int(indexAsString)!
+        if let firstViewModel = viewModelCollection.first {
+            setViewControllers([controller(for: firstViewModel)], direction: .forward, animated: true, completion: nil)
         }
-
-        setViewControllers([controller(from: index)], direction: .forward, animated: true, completion: nil)
     }
 
-    func controller(from index: Int) -> UIViewController
-    {
+    func controller(for viewModel: ViewModelDelegate) -> UIViewController {
         var controller = storyboard!.instantiateViewController(withIdentifier: pageControllerStoryBoardID) as! ViewModelManagerDelegate
-        if var vm = viewModelCollection[safe: index]
-        {
-            vm._index = index
-            controller.viewModel = vm
-        }
+        controller.viewModel = viewModel
 
         return controller as! UIViewController
     }
 
-    func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController?
-    {
-        let vm = (viewController as! ViewModelManagerDelegate).viewModel
-        let index = vm._index + 1
+    func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController? {
+        let vmc = self.viewModelCollection as! Array<ViewModel>
+        let vc = viewController as! ViewModelManagerDelegate
+        let vm = vc.viewModel as! ViewModel
 
-        if index < viewModelCollection.count
-        {
-            return controller(from: index)
+        if var index = vmc.index(of: vm) {
+            index += 1
+            if index < viewModelCollection.count {
+                return controller(for: viewModelCollection[index])
+            }
         }
 
         return nil
     }
 
-    func pageViewController(_ pageViewController: UIPageViewController, viewControllerBefore viewController: UIViewController) -> UIViewController?
-    {
-        let vm = (viewController as! ViewModelManagerDelegate).viewModel
-        let index = vm._index - 1
+    func pageViewController(_ pageViewController: UIPageViewController, viewControllerBefore viewController: UIViewController) -> UIViewController? {
+        let vmc = self.viewModelCollection as! Array<ViewModel>
+        let vc = viewController as! ViewModelManagerDelegate
+        let vm = vc.viewModel as! ViewModel
 
-        if index >= 0
-        {
-            return controller(from: index)
+        if var index = vmc.index(of: vm) {
+            index -= 1
+            if index >= 0 {
+                return controller(for: viewModelCollection[index])
+            }
         }
 
         return nil
