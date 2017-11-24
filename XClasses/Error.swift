@@ -47,11 +47,12 @@ protocol AlertDelegate {
 extension AlertDelegate {
     func presentAlert(error: Error) {
         let alert = UIAlertController(title: NSLocalizedString("Alert", comment: "Title to alert user of problem"), message: error.localizedDescription, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: ""), style: .`default`))
+        let okAction = UIAlertAction(title: NSLocalizedString("OK", comment: ""), style: .default) { action in
+            self.alertAction()
+        }
+        alert.addAction(okAction)
         if let viewController = self as? UIViewController {
-            viewController.present(alert, animated: true) {
-                self.alertAction()
-            }
+            viewController.present(alert, animated: true)
         }
     }
 

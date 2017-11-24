@@ -8,10 +8,8 @@
 
 import Foundation
 
-extension String
-{
-    func snakeCased() -> String
-    {
+extension String {
+    func snakeCased() -> String {
         let pattern = "([a-z0-9])([A-Z])"
 
         let regex = try? NSRegularExpression(pattern: pattern, options: [])
@@ -19,8 +17,7 @@ extension String
         return (regex?.stringByReplacingMatches(in: self, options: [], range: range, withTemplate: "$1_$2").lowercased())!
     }
 
-    func camelCased() -> String
-    {
+    func camelCased() -> String {
         let items = components(separatedBy: "_")
         var camelCase = ""
 
@@ -115,5 +112,20 @@ class MutatingURL {
 
     init(url: URL) {
         self.url = url
+    }
+}
+
+extension Data {
+    func append(fileURL: URL) throws {
+        if let fileHandle = FileHandle(forWritingAtPath: fileURL.path) {
+            defer {
+                fileHandle.closeFile()
+            }
+            fileHandle.seekToEndOfFile()
+            fileHandle.write(self)
+        }
+        else {
+            try write(to: fileURL, options: .atomic)
+        }
     }
 }

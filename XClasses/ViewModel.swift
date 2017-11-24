@@ -47,8 +47,6 @@ enum SyncStatus: Int {
     case created
     case updated
     case deleted
-    case upload
-    case download
 }
 
 struct FileModel {
@@ -58,6 +56,8 @@ struct FileModel {
     let expiry: Int
     let deleteOnUpload: Bool
 }
+
+// TODO: Make ViewModel thread safe for Realm
 
 public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     static let tryAgain = 60.0
@@ -93,12 +93,12 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return "default"
     }
 
-    /// Can read from server
+    /// Can read from service
     class var read: Bool {
         return true
     }
 
-    /// Can write to server
+    /// Can write to service
     class var write: Bool {
         return false
     }
@@ -136,6 +136,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     - **localURL** Path to local file
     - **expiry** when file is deleted locally (in seconds)
     - **deleteOnUpload** as it says
+    - **uploadStatusField**
     */
     class var fileAttributes: [String: FileModel] {
         return ["default": FileModel(bucket: "default", serverPath: "/{clientID}.png", localURL: "/{clientID}.png", expiry: 3600, deleteOnUpload: true)]
@@ -198,10 +199,8 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         let realm = try! Realm()
         
         try! realm.write {
-            for property in schemaProperties
-            {
-                if !property.name.hasPrefix("_") && dictionary[property.name] != nil
-                {
+            for property in schemaProperties {
+                if !property.name.hasPrefix("_") && dictionary[property.name] != nil {
                     switch property.type {
                     case .string:
                         let value = dictionary[property.name]!
@@ -245,8 +244,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 
             _sync = SyncStatus.current.rawValue
 
-            if isNew
-            {
+            if isNew {
                 realm.add(self)
             }
         }
@@ -272,55 +270,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return URL(string: "https://storage.googleapis.com/" + fileAttributes.bucket + replaceOccurrence(of: fileAttributes.serverPath))!
     }
 
-//    func getFile(key: String = "default", progress: @escaping (_ progress: Progress) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in})
-//    {
-//        let (localURL, exists) = fileURL(forKey: key)
-//        if !exists
-//        {
-//            let fileAttributes = type(of: self).fileAttributes[key]!
-//            let localURL = Path(replaceOccurrence(of: fileAttributes.localURL)).url
-//            let serverPath = replaceOccurrence(of: fileAttributes.serverPath)
-//
-//            let storage = Storage.storage(url: "gs://" + fileAttributes.bucket)
-//            let storageRef = storage.reference(forURL: "gs://" + fileAttributes.bucket + serverPath)
-//
-//            let downloadTask = storageRef.write(toFile: localURL)
-//
-//            downloadTask.observe(.progress) { snapshot in
-//                progress(snapshot.progress!)
-//            }
-//
-//            let selfRef = ThreadSafeReference(to: self)
-//
-//            downloadTask.observe(.success) { snapshot in
-//                completion(localURL)
-//                if self._sync == SyncStatus.download.rawValue
-//                {
-//                    let realm = try! Realm()
-//                    let threadSafeSelf = realm.resolve(selfRef)!
-//                    try! realm.write {
-//                        threadSafeSelf._sync = SyncStatus.current.rawValue
-//                    }
-//                }
-//            }
-//
-//            // Errors shouldn't happen - so log it and try again in a minute
-//            downloadTask.observe(.failure) { snapshot in
-//                log(error: snapshot.error!.localizedDescription)
-//                Timer.scheduledTimer(withTimeInterval: ViewModel.tryAgain, repeats: false, block: { timer in
-//                    self.getFile(key: key, progress: progress, completion: completion)
-//                })
-//                // TODO: will send back only errors that the user sees in a modal
-//                error(snapshot.error!)
-//            }
-//        }
-//        else
-//        {
-//            completion(localURL)
-//        }
-//    }
-
-    // TODO: return wait flag
+    // TODO: Return promise, Add NSProgress
     func putFile(key: String = "default", progress: @escaping (_ progress: Progress) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in})
     {
         let fileAttributes = type(of: self).fileAttributes[key]!
@@ -338,25 +288,12 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
             progress(snapshot.progress!)
         }
 
-        let selfRef = ThreadSafeReference(to: self)
-
         uploadTask.observe(.success) { snapshot in
             completion(localURL)
-            let realm = try! Realm()
-            let threadSafeSelf = realm.resolve(selfRef)!
 
-            if threadSafeSelf._sync == SyncStatus.download.rawValue
+            if fileAttributes.deleteOnUpload
             {
-                if threadSafeSelf._sync == SyncStatus.upload.rawValue
-                {
-                    try! realm.write {
-                        threadSafeSelf._sync = SyncStatus.current.rawValue
-                    }
-                }
-                if fileAttributes.deleteOnUpload
-                {
-                    try! FileManager.default.removeItem(at: localURL)
-                }
+                try! FileManager.default.removeItem(at: localURL)
             }
         }
 
@@ -371,63 +308,32 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         }
     }
 
-//    func streamFile(key: String = "default", progress: @escaping (_ temporyURL: URL) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in}) {
+    // Stream file. Return temp url with promise
+    // Resume/restart stream if failure
+    // -- Record last data event. If longer than 10 seconds, then restart download stream
+    // move file to final location
+    // on finish resolve promise
+    // Add NSProgress
+//    func streamFile(key: String = "default") -> Promise<URL> {
+//        // This first part is outside the promise so Realm doesn't do its exception
 //        let source = serverURL(forKey: key)
-//        let (localURL, exists) = fileURL()
+//        let (localURL, exists) = fileURL(forKey: key)
 //
-//        if !exists {
-//            Alamofire.download(source, to: { temp, response in
-//                // Move these back to the main thread, else Realm will get the shits down the line.
-//                // Assumes this is originally called from the main thread
-//                DispatchQueue.main.async {
-//                    progress(temp)
-//                }
-//                return (localURL, [.removePreviousFile, .createIntermediateDirectories])
-//            }).response { response in
-//                DispatchQueue.main.async {
-//                    if response.error != nil {
-//                        completion(response.destinationURL!)
-//                    }
-//                    else {
-//                        //TODO: Humanise the error for display in modal
-//                        //error(response.error!)
-//                    }
+//        return Promise<URL>({ resolve, reject, _ in
+//            if exists {
+//                resolve(localURL)
+//            }
+//            else {
+//                Alamofire.request(source.absoluteString).stream { data in
+//                    resolve(localURL)
+//                    try! data.append(fileURL: localURL)
 //                }
 //            }
-//        }
-//        else {
-//            completion(localURL)
-//        }
+//        })
 //    }
 
-    // TODO: Add Progress to method, and track with Alamofire
-    func streamFile(key: String = "default", completion: @escaping (_ url: URL) -> Void = {_ in}) -> Promise<URL> {
-        let source = self.serverURL(forKey: key)
-        let (localURL, exists) = self.fileURL()
-        return Promise<URL>({ resolve, reject, _ in
-            if !exists {
-                Alamofire.download(source, to: { temp, response in
-                    print("*** get temp")
-                    resolve(temp)
-                    return (localURL, [.removePreviousFile, .createIntermediateDirectories])
-                }).response { response in
-                    if response.error == nil {
-                        print("*** get complete file")
-                        completion(response.destinationURL!)
-                    }
-                    else {
-                        log(error: response.error.debugDescription)
-                        reject(CommonError.networkConnectionError)
-                    }
-                }
-            }
-            else {
-                resolve(localURL)
-            }
-        })
-    }
 
-    // TODO: Add Progress to method
+    // TODO: Add NSProgress to method
     func getFile(key: String = "default") -> Promise<URL>
     {
         let selfRef = ThreadSafeReference(to: self)
@@ -452,14 +358,6 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 
                 downloadTask.observe(.success) { snapshot in
                     resolve(localURL)
-                    if self._sync == SyncStatus.download.rawValue
-                    {
-                        let realm = try! Realm()
-                        let threadSafeSelf = realm.resolve(selfRef)!
-                        try! realm.write {
-                            threadSafeSelf._sync = SyncStatus.current.rawValue
-                        }
-                    }
                 }
 
                 downloadTask.observe(.failure) { snapshot in
@@ -473,29 +371,6 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
             }
         })
     }
-
-//    resolve((data, response))
-//    reject("Image cannot be decoded")
-
-//    func syncFiles()
-//    {
-//        if _sync == SyncStatus.upload.rawValue
-//        {
-//            let keys = type(of: self).fileAttributes.keys
-//            for key in keys
-//            {
-//                putFile(key: key)
-//            }
-//        }
-//        else if _sync == SyncStatus.download.rawValue
-//        {
-//            let keys = type(of: self).fileAttributes.keys
-//            for key in keys
-//            {
-//                getFile(key: key)
-//            }
-//        }
-//    }
 
     private func replaceOccurrence(of: String) -> String
     {

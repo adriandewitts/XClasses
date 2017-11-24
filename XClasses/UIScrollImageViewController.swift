@@ -8,31 +8,30 @@
 import UIKit
 import Nuke
 
-class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
-{
+class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate {
+    @IBOutlet var emptyView: UIView?
     @IBOutlet var scrollView: UIScrollView!
     @IBOutlet var imageView: UIImageView!
 
+    var emptyViewIsHidden = false
+
     // TODO: Better wait defaults
-    var waitAnimationFileName = "wait"
-    var waitAnimationDuration = 2.0
-    var waitView: UIImageView?
-    var waitViewRect: CGRect {
-        return CGRect(x: 0.0, y: 0.0, width: 50.0, height: 50.0)
-    }
+//    var waitAnimationFileName = "wait"
+//    var waitAnimationDuration = 2.0
+//    var waitView: UIImageView?
+//    var waitViewRect: CGRect {
+//        return CGRect(x: 0.0, y: 0.0, width: 50.0, height: 50.0)
+//    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
         // Load in image from viewModel
-
         if let imageURL = viewModel.properties["image"]
         {
             Nuke.loadImage(with: URL(string: imageURL)!, into: imageView)
             //TODO: When loaded reset zoom
         }
-
-        waitAnimation()
 
         // Setup rest of ImageView with behaviours
 
@@ -53,6 +52,7 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
 
         singleTap.require(toFail: doubleTap)
 
+        showEmptyView()
         //resetZoom(at: scrollView.bounds.size)
     }
 
@@ -81,20 +81,38 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
         scrollView.zoomScale = 1.0
     }
 
-    /// Setup wait animation centred in scrollview. Will wait 0.25 seconds to run and checks if image has already loaded.
-    func waitAnimation()
-    {
+    func showEmptyView() {
+        // Give if it a little time just in case something else is loading
         Timer.scheduledTimer(withTimeInterval: 0.25, repeats: false) { timer in
-            //TODO: Fix this - window is not set
-            if self.imageView.image == nil, self.waitView == nil, let window = UIApplication.shared.keyWindow {
-                self.waitView = UIImageView(frame: self.waitViewRect)
-                self.waitView?.center = window.convert(window.center, from: window)
-                self.scrollView.addSubview(self.waitView!)
+            if let emptyView = self.emptyView, !self.emptyViewIsHidden {
+                let backingView = self.scrollView.superview!
+                backingView.addSubview(emptyView)
+                emptyView.frame = self.scrollView.frame
+                self.scrollView.removeFromSuperview()
             }
-
-            self.waitView?.image = UIImage.animatedImageNamed(self.waitAnimationFileName, duration: self.waitAnimationDuration)
         }
     }
+
+    func hideEmptyView() {
+        emptyView?.removeFromSuperview()
+        emptyViewIsHidden = true
+        self.imageView.isHidden = false
+    }
+
+    /// Setup wait animation centred in scrollview. Will wait 0.25 seconds to run and checks if image has already loaded.
+//    func waitAnimation()
+//    {
+//        Timer.scheduledTimer(withTimeInterval: 0.25, repeats: false) { timer in
+//            //TODO: Fix this - window is not set
+//            if self.imageView.image == nil, self.waitView == nil, let window = UIApplication.shared.keyWindow {
+//                self.waitView = UIImageView(frame: self.waitViewRect)
+//                self.waitView?.center = window.convert(window.center, from: window)
+//                self.scrollView.addSubview(self.waitView!)
+//            }
+//
+//            self.waitView?.image = UIImage.animatedImageNamed(self.waitAnimationFileName, duration: self.waitAnimationDuration)
+//        }
+//    }
 
     // Gestures
 
@@ -107,6 +125,7 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
     {
         if (scrollView.zoomScale == scrollView.minimumZoomScale)
         {
+            // Zoom in
             let center = tapGesture.location(in: scrollView)
             let size = imageView.frame.size
             let zoomRect = CGRect(x: center.x, y: center.y, width: (size.width / 2), height: (size.height / 2))
@@ -114,6 +133,7 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate
         }
         else
         {
+            // Zoom out
             scrollView.setZoomScale(scrollView.minimumZoomScale, animated: true)
         }
     }

@@ -14,10 +14,10 @@ protocol PDFPageDelegate {
     var pdfDocument: PDFDocument { get }
 }
 
-enum PDFError: Error {
+enum PDFError: LocalizedError {
     case pageNotReady
 
-    var localizedDescription: String {
+    public var errorDescription: String? {
         switch self {
         case .pageNotReady:
             return NSLocalizedString("Page is still downloading.", comment: "")
@@ -48,10 +48,6 @@ class PDFDocument {
             }
             else {
                 reject(PDFError.pageNotReady)
-                // Delay rejection so it can be retried periodically
-//                Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { timer in
-//                    reject(PDFError.pageNotReady)
-//                }
             }
         }
     }

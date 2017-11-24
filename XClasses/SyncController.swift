@@ -331,21 +331,4 @@ public class SyncController
             }
         }
     }
-
-//    func fileSync(models: [AnyClass])
-//    {
-//        // TODO: Needs robust checking and status
-//        // TODO: Limit downloads and uploads at the same time
-//        let realm = try! Realm()
-//        let predicate = NSPredicate(format: "_sync = \(SyncStatus.upload.rawValue) or _sync = \(SyncStatus.download.rawValue) ")
-//
-//        for model in models
-//        {
-//            let result = realm.objects(model as! Object.Type).filter(predicate)
-//            for item in result
-//            {
-//                (item as! ViewModel).syncFiles()
-//            }
-//        }
-//    }
 }

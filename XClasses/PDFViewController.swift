@@ -36,8 +36,6 @@ class PDFViewController: UIScrollImageViewController, AlertDelegate
     {
         if let page = viewModel as? PDFPageDelegate
         {
-            waitAnimation()
-            
             page.pdfDocument.pdfPageImage(pageNumber: page.pageNumber, size: size).retry(30) {_,_ in
                 // Wait for a second to try again
                 sleep(1)
@@ -45,8 +43,6 @@ class PDFViewController: UIScrollImageViewController, AlertDelegate
             }.then(in: .main) { image in
                 self.imageView.image = image
                 self.resetZoom(at: size)
-                self.waitView?.removeFromSuperview()
-                self.waitView = nil
             }.catch { error in
                 self.presentAlert(error: error)
             }
