@@ -43,6 +43,7 @@ class PDFViewController: UIScrollImageViewController, AlertDelegate
             }.then(in: .main) { image in
                 self.imageView.image = image
                 self.resetZoom(at: size)
+                self.hideEmptyView()
             }.catch { error in
                 self.presentAlert(error: error)
             }

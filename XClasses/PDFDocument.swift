@@ -55,7 +55,7 @@ class PDFDocument {
     func cachePages(pageNumber: Int, size: CGSize = UIScreen.main.bounds.size) {
         cachePage(pageNumber: pageNumber, size: size)
         
-        let queue = DispatchQueue(label: "caching")
+        let queue = DispatchQueue(label: "caching", qos: DispatchQoS.utility)
         queue.async {
             self.cachePage(pageNumber: pageNumber + 1, size: size)
             self.cachePage(pageNumber: pageNumber - 1, size: size)

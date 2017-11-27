@@ -13,7 +13,7 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate {
     @IBOutlet var scrollView: UIScrollView!
     @IBOutlet var imageView: UIImageView!
 
-    var emptyViewIsHidden = false
+    var emptyViewIsHidden = true
 
     // TODO: Better wait defaults
 //    var waitAnimationFileName = "wait"
@@ -82,13 +82,13 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate {
     }
 
     func showEmptyView() {
+        emptyViewIsHidden = false
         // Give if it a little time just in case something else is loading
         Timer.scheduledTimer(withTimeInterval: 0.25, repeats: false) { timer in
             if let emptyView = self.emptyView, !self.emptyViewIsHidden {
                 let backingView = self.scrollView.superview!
                 backingView.addSubview(emptyView)
                 emptyView.frame = self.scrollView.frame
-                self.scrollView.removeFromSuperview()
             }
         }
     }
@@ -96,7 +96,6 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate {
     func hideEmptyView() {
         emptyView?.removeFromSuperview()
         emptyViewIsHidden = true
-        self.imageView.isHidden = false
     }
 
     /// Setup wait animation centred in scrollview. Will wait 0.25 seconds to run and checks if image has already loaded.
