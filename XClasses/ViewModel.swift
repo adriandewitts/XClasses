@@ -65,7 +65,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     @objc dynamic var _sync = SyncStatus.created.rawValue // Record status for syncing
     @objc dynamic var id = 0 // Server ID - do not make primary key, as it is unchangeable
     @objc dynamic var clientId = UUID().uuidString // Used to make sure records aren't saved to the server DB multiple times
-    @objc dynamic var deleted = false
+    @objc dynamic var _deleted = false
 
     // Mark: Override in subclass
 
@@ -156,7 +156,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     /// Return results of query
     class func find(query: NSPredicate? = nil, orderBy: String? = nil, orderAscending: Bool = false) -> Results<ViewModel> {
         let realm = try! Realm()
-        var result = realm.objects(self).filter(NSPredicate(format: "deleted = false"))
+        var result = realm.objects(self).filter(NSPredicate(format: "_deleted = false"))
         if query != nil {
             result = result.filter(query!)
         }
@@ -175,12 +175,16 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
             if !property.name.hasPrefix("_") {
                 let value = self.value(forKey: property.name)
                 let name = property.name.snakeCased()
-                if property.type != .date {
-                    properties[name] = String(describing: value!)
-                }
-                else {
+
+                switch property.type {
+                case .bool:
+                    let boolValue = value as! Bool
+                    properties[name] = boolValue ? "true" : "false"
+                case .date:
                     let dateValue = value as! Date
                     properties[name] = dateValue.toUTCString()
+                default:
+                    properties[name] = String(describing: value!)
                 }
             }
         }
@@ -192,61 +196,53 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return properties
     }
 
-    /// Imports the data from the CSV and does the type casting that it needs to do
+    /// Imports the data from a dictionary and does the type casting that it needs to do. If it is an update put in a Realm write around the method
     func importProperties(dictionary: [String: String], isNew: Bool)
     {
         let schemaProperties = objectSchema.properties
-        let realm = try! Realm()
-        
-        try! realm.write {
-            for property in schemaProperties {
-                if !property.name.hasPrefix("_") && dictionary[property.name] != nil {
-                    switch property.type {
-                    case .string:
-                        let value = dictionary[property.name]!
-                        if value != "" {
-                            self[property.name] = value
-                        }
-                    case .int:
-                        if let number = Int(dictionary[property.name]!) {
-                            self[property.name] = number
-                        }
-                    case .float:
-                        if let number = Float(dictionary[property.name]!) {
-                            self[property.name] = number
-                        }
-                    case .double:
-                        if let number = Double(dictionary[property.name]!) {
-                            self[property.name] = number
-                        }
-                    case .bool:
-                        let boolean = dictionary[property.name]!
-                        if boolean != "" {
-                            self[property.name] = boolean.lowercased() == "true"
-                        }
-                    case .date:
-                        if let date = Date.from(UTCString: dictionary[property.name]!) {
-                            self[property.name] = date
-                        }
-                    case .linkingObjects:
-                        if property.objectClassName == "RealmString" {
-                            let array = dictionary[property.name]!.components(separatedBy: ",")
-                            let list = self[property.name] as! List<RealmString>
-                            for element in array {
-                                list.append(RealmString(stringValue: element))
-                            }
-                        }
-                    default:
-                        log(error: "Property type does not exist")
+        for property in schemaProperties {
+            if !property.name.hasPrefix("_") && dictionary[property.name] != nil {
+                switch property.type {
+                case .string:
+                    let value = dictionary[property.name]!
+                    if value != "" {
+                        self[property.name] = value
                     }
+                case .int:
+                    if let number = Int(dictionary[property.name]!) {
+                        self[property.name] = number
+                    }
+                case .float:
+                    if let number = Float(dictionary[property.name]!) {
+                        self[property.name] = number
+                    }
+                case .double:
+                    if let number = Double(dictionary[property.name]!) {
+                        self[property.name] = number
+                    }
+                case .bool:
+                    let boolean = dictionary[property.name]!
+                    if boolean != "" {
+                        self[property.name] = boolean.lowercased() == "true"
+                    }
+                case .date:
+                    if let date = Date.from(UTCString: dictionary[property.name]!) {
+                        self[property.name] = date
+                    }
+                case .linkingObjects:
+                    if property.objectClassName == "RealmString" {
+                        let array = dictionary[property.name]!.components(separatedBy: ",")
+                        let list = self[property.name] as! List<RealmString>
+                        for element in array {
+                            list.append(RealmString(stringValue: element))
+                        }
+                    }
+                default:
+                    log(error: "Property type does not exist")
                 }
             }
 
             _sync = SyncStatus.current.rawValue
-
-            if isNew {
-                realm.add(self)
-            }
         }
     }
 

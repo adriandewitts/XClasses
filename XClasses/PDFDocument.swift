@@ -41,7 +41,7 @@ class PDFDocument {
     }
 
     func pdfPageImage(pageNumber: Int, size: CGSize = UIScreen.main.bounds.size) -> Promise<UIImage> {
-        return Promise<UIImage>(in: .main) { resolve, reject, _ in
+        return Promise<UIImage> { resolve, reject, _ in
             self.cachePages(pageNumber: pageNumber, size: size)
             if let image = self.cachedImages.object(forKey: NSNumber(value: pageNumber)) {
                 resolve(image)

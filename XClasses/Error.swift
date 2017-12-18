@@ -34,7 +34,7 @@ enum CommonError: LocalizedError {
         case .permissionError:
             return NSLocalizedString("You do not have access.", comment: "")
         case .syncLockError:
-            return NSLocalizedString("Please wait.", comment: "")
+            return NSLocalizedString("Please wait a little while before trying again.", comment: "")
         }
     }
 }

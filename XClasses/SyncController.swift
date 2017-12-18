@@ -20,6 +20,7 @@ public class SyncModel: Object
     @objc dynamic var serverSync = Date.distantPast // Server timestamp of last server sync. To be used on next sync request
     @objc dynamic var readLock = Date.distantPast
     @objc dynamic var writeLock = Date.distantPast
+    @objc dynamic var deleteLock = Date.distantPast
 }
 
 public class SyncController
@@ -32,6 +33,10 @@ public class SyncController
 
     /// Configure sets up the meta data for each synced table
     func configure(models: [AnyClass]) {
+        var config = Realm.Configuration()
+        config.fileURL = (Path.userApplicationSupport + "default.realm").url
+        Realm.Configuration.defaultConfiguration = config
+
         let realm = try! Realm()
 
         for m in models {
@@ -82,9 +87,11 @@ public class SyncController
     /// Sync will read and write sync specific models. If there is no token it will attempt to read with guest permissions. Will not attempt a retry if there are any issues.
     func sync(models: [ViewModel.Type])
     {
+        //TODO: Retry a few time if there is an error
         token().then(in: .utility) { token in
             for model in models {
-                self.writeSync(model: model, token: token)
+                self.writeSync(model: model, token: token).then(in: .utility) {}
+                self.deleteSync(model: model, token: token).then(in: .utility) {}
                 self.readSync(model: model, token: token).then(in: .utility) {}
             }
         }.catch() { error in
@@ -96,7 +103,7 @@ public class SyncController
     }
 
     /// Instead of responding with a Promise of results, instead return the sync is ready. The reason for this is that it is more code to move the Realm response over the thread
-    func syncReady(model: ViewModel.Type, freshness: Double = 600.0, timeout: Double = 10.0) -> Promise<Void> {
+    func syncReady(model: ViewModel.Type, freshness: Double = 600.0, timeout: Double = 30.0) -> Promise<Void> {
         return Promise<Void> { resolve, reject, _ in
             let realm = try! Realm()
             guard let syncModel = realm.objects(SyncModel.self).filter(NSPredicate(format: "modelName = '\(model)'")).first else {
@@ -137,12 +144,12 @@ public class SyncController
         }
     }
 
-    /// Read sync make a request to the web service and stores new record to the local DB. Will also delete record marked for deletion
+    /// Read sync make a request to the web service and stores new record to the local DB. Will also mark records for deletion
     func readSync(model: ViewModel.Type, token: String? = nil, qos: DispatchQoS.QoSClass = .utility) -> Promise<Void> {
         return Promise<Void> { resolve, reject, _ in
             let realm = try! Realm()
 
-            let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos))//plugins: [NetworkLoggerPlugin(verbose: true)])
+            let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos), plugins: [NetworkLoggerPlugin(verbose: true)])
 
             let modelClass = model
             let model = "\(model)"
@@ -151,7 +158,7 @@ public class SyncController
             let minuteAgo = Date.init(timeIntervalSinceNow: -SyncController.serverTimeout)
             var predicate = NSPredicate(format: "modelName = '\(model)' AND readLock < %@", minuteAgo as CVarArg)
             guard let syncModel = realm.objects(SyncModel.self).filter(predicate).first else {
-                reject(CommonError.permissionError)
+                reject(CommonError.syncLockError)
                 return
             }
 
@@ -170,10 +177,18 @@ public class SyncController
             provider.request(.read(version: modelClass.tableVersion, table: modelClass.table, view: modelClass.tableView, accessToken: token, lastTimestamp: syncModel.serverSync, predicate: nil)) { result in
                 // Local realm needed for thread
                 let realm = try! Realm()
+
+                defer {
+                    let syncModel = realm.resolve(syncModelRef)!
+                    try! realm.write {
+                        syncModel.readLock = Date.distantPast
+                        syncModel.serverSync = timestamp
+                    }
+                }
+
                 switch result {
                 case let .success(moyaResponse):
                     guard moyaResponse.statusCode == 200 else {
-                        // TODO: if 403 show login modal
                         log(error: "Server returned status code \(moyaResponse.statusCode) while trying to read sync")
                         reject(CommonError.permissionError)
                         return
@@ -188,6 +203,9 @@ public class SyncController
                         let header = h.map { $0.camelCased() }
                         let lines = l.dropFirst(2)
                         let idIndex = header.index(of: "id")!
+                        var newRecords: [Object] = []
+                        newRecords.reserveCapacity(lines.count)
+
                         for line in lines
                         {
                             let components = line.components(separatedBy: "|")
@@ -203,20 +221,26 @@ public class SyncController
                             let record = realm.objects(modelClass).filter(predicate).first
                             if (dict["delete"] == nil) || (dict["delete"] != "true") {
                                 if record != nil {
-                                    record!.importProperties(dictionary: dict, isNew:false)
+                                    try! realm.write {
+                                        record!.importProperties(dictionary: dict, isNew:false)
+                                    }
                                 }
                                 else {
                                     let record = modelClass.init()
                                     record.importProperties(dictionary: dict, isNew: true)
+                                    newRecords.append(record)
                                 }
                             }
                             else {
                                 try! realm.write {
                                     if let record = record {
-                                        record.deleted = true
+                                        record._deleted = true
                                     }
                                 }
                             }
+                        }
+                        try! realm.write {
+                            realm.add(newRecords)
                         }
                     }
                     catch {
@@ -228,105 +252,165 @@ public class SyncController
                     reject(CommonError.networkConnectionError)
                 }
 
-                let safeSyncModel = realm.resolve(syncModelRef)!
-                try! realm.write {
-                    safeSyncModel.readLock = Date.distantPast
-                    safeSyncModel.serverSync = timestamp
-                }
                 resolve(Void())
             }
         }
     }
 
-    //TODO: Clean up
-    func writeSync(model: ViewModel.Type, token: String, qos: DispatchQoS.QoSClass = .utility)
-    {
-        let realm = try! Realm()
-        let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos))
+    func writeSync(model: ViewModel.Type, token: String? = nil, qos: DispatchQoS.QoSClass = .utility) -> Promise<Void> {
+        return Promise<Void> { resolve, reject, _ in
+            let realm = try! Realm()
+            let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos), plugins: [NetworkLoggerPlugin(verbose: true)])
 
-        let modelClass = model
-        let model = "\(model)"
+            let modelClass = model
+            let model = "\(model)"
 
-        // This section handles the writes to server DB
-        // Checks if class can write, has a writelock (max 1 minute), and has something to write
-        if modelClass.write == true
-        {
+            // Make sure there are records to save
+            var predicate = NSPredicate(format: "_sync = \(SyncStatus.created.rawValue) OR _sync = \(SyncStatus.updated.rawValue)")
+            let syncRecords = realm.objects(modelClass).filter(predicate)
+            guard syncRecords.count > 0 else {
+                return
+            }
+
+            // Make sure model is not sync locked
             let minuteAgo = Date.init(timeIntervalSinceNow: -SyncController.serverTimeout)
-            var predicate = NSPredicate(format: "modelName = '\(model)' AND writeLock < %@", minuteAgo as CVarArg)
-            if let syncModel = realm.objects(SyncModel.self).filter(predicate).first
-            {
-                try! realm.write { syncModel.writeLock = Date() }
-                predicate = NSPredicate(format: "_sync = \(SyncStatus.created.rawValue) OR _sync = \(SyncStatus.updated.rawValue)")
-                let toSave = realm.objects(modelClass).filter(predicate)
-                if toSave.count > 0
-                {
-                    provider.request(.createAndUpdate(version: modelClass.tableVersion, table: modelClass.table, view: modelClass.tableView, accessToken: token, records: Array(toSave)))
-                    { result in
-                        // Local realm needed for thread
-                        let realm = try! Realm()
-                        switch result {
-                        case let .success(moyaResponse):
-                            if moyaResponse.statusCode == 200
-                            {
-                                do
-                                {
-                                    let response = try moyaResponse.mapString()
-                                    let lines = response.components(separatedBy: "\n").dropFirst()
-                                    for line in lines
-                                    {
-                                        let components = line.components(separatedBy: "|")
-                                        let id = Int(components[0])!
-                                        let cid = components[1]
-                                        predicate = NSPredicate(format: "id = \(id) OR clientId = '\(cid)'")
-                                        let item = toSave.filter(predicate).first!
-                                        try! realm.write {
-                                            item.id = id
-                                            item._sync = SyncStatus.current.rawValue
-                                        }
-                                    }
-                                }
-                                catch { log(error: "Response was impossibly incorrect") }
-                            }
-                            else
-                            {
-                                // TODO: if 403 show login modal
-                                log(error: "Server returned status code \(moyaResponse.statusCode) while trying to write sync")
-                                //Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
-                            }
-                        case let .failure(error):
-                            // TODO: If timer exists don't schedule another timer
-                            log(error: error.errorDescription!)
-                            //Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
-                        }
-                        //try! realm.write { syncModel.writeLock = Date.distantPast }
-                    }
+            predicate = NSPredicate(format: "modelName = '\(model)' AND writeLock < %@", minuteAgo as CVarArg)
+            guard let syncModel = realm.objects(SyncModel.self).filter(predicate).first else {
+                reject(CommonError.syncLockError)
+                return
+            }
 
-                    // Delete records section
-                    predicate = NSPredicate(format: "_sync = \(SyncStatus.deleted.rawValue)")
-                    let toDelete = realm.objects(modelClass).filter(predicate)
-                    if toDelete.count > 0
-                    {
-                        provider.request(.delete(version: modelClass.tableVersion, table: modelClass.table, view: modelClass.tableView, accessToken: token, records: Array(toDelete)))
-                        { result in
-                            switch result {
-                            case let .success(moyaResponse):
-                                if moyaResponse.statusCode == 200
-                                {
-                                    // As long as the status code is a success, we will delete these objects
-                                    try! realm.write { realm.delete(toDelete) }
+            // Make sure model has permission. Writes/POST always must have authentication
+            guard token != nil, modelClass.write == true else {
+                reject(CommonError.permissionError)
+                return
+            }
+
+            //var timestamp = Date.distantPast
+            try! realm.write {
+                syncModel.writeLock = Date()
+            }
+
+            let syncModelRef = ThreadSafeReference(to: syncModel)            
+            var syncSlice: [ViewModel] = []
+            
+            // 1000 seems to get close to the 60 second limit for updates, so 500 gives it some room for error
+            let limit = 3000
+            syncSlice.reserveCapacity(limit)
+            var count = 0
+            for record in syncRecords {
+                count += 1
+                if count >= limit {
+                    break
+                }
+                syncSlice.append(record)
+            }
+
+            provider.request(.createAndUpdate(version: modelClass.tableVersion, table: modelClass.table, view: modelClass.tableView, accessToken: token!, records: syncSlice)) { result in
+                // Local realm needed for thread
+                let realm = try! Realm()
+
+                defer {
+                    let syncModel = realm.resolve(syncModelRef)!
+                    try! realm.write {
+                        syncModel.writeLock = Date.distantPast
+                    }
+                }
+
+                switch result {
+                case let .success(moyaResponse):
+                    if moyaResponse.statusCode == 200 {
+                        do {
+                            let response = try moyaResponse.mapString()
+                            let lines = response.components(separatedBy: "\n").dropFirst()
+                            for line in lines {
+                                let components = line.components(separatedBy: "|")
+                                let id = Int(components[0])!
+                                let cid = components[1]
+                                predicate = NSPredicate(format: "id = \(id) OR clientId = '\(cid)'")
+                                let item = realm.objects(modelClass).filter(predicate).first!
+                                try! realm.write {
+                                    item.id = id
+                                    item._sync = SyncStatus.current.rawValue
                                 }
-                                else
-                                {
-                                    log(error: "Either user was trying to delete records they can't or something went wrong with the server")
-                                }
-                            case let .failure(error):
-                                log(error: error.errorDescription!)
-                                //Timer.scheduledTimer(withTimeInterval: SyncController.serverTimeout, repeats: false, block: { timer in self.sync(models: models)})
                             }
-                            //try! realm.write { syncModel.writeLock = Date.distantPast }
-                            // TODO: Update and delete would both need to finish to release (At the moment keeping them commented out so it locks for a min
+                        }
+                        catch {
+                            log(error: "Response was impossibly incorrect")
+                            reject(CommonError.unexpectedError)
                         }
                     }
+                    else {
+                        log(error: "Server returned status code \(moyaResponse.statusCode) while trying to write sync")
+                        reject(CommonError.permissionError)
+                    }
+                case let .failure(error):
+                    log(error: error.errorDescription!)
+                    reject(CommonError.networkConnectionError)
+                }
+            }
+        }
+    }
+
+    func deleteSync(model: ViewModel.Type, token: String? = nil, qos: DispatchQoS.QoSClass = .utility) -> Promise<Void> {
+        return Promise<Void> { resolve, reject, _ in
+            let realm = try! Realm()
+            let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos), plugins: [NetworkLoggerPlugin(verbose: true)])
+
+            let modelClass = model
+            let model = "\(model)"
+
+            // Make sure there are records to delete
+            var predicate = NSPredicate(format: "_sync = \(SyncStatus.deleted.rawValue)")
+            let syncRecords = realm.objects(modelClass).filter(predicate)
+            guard syncRecords.count > 0 else {
+                return
+            }
+
+            // Make sure model is not sync locked
+            let minuteAgo = Date.init(timeIntervalSinceNow: -SyncController.serverTimeout)
+            predicate = NSPredicate(format: "modelName = '\(model)' AND deleteLock < %@", minuteAgo as CVarArg)
+            guard let syncModel = realm.objects(SyncModel.self).filter(predicate).first else {
+                reject(CommonError.syncLockError)
+                return
+            }
+
+            // Make sure model has permission. Delete always must have authentication
+            guard token != nil, modelClass.write == true else {
+                reject(CommonError.permissionError)
+                return
+            }
+
+            //var timestamp = Date.distantPast
+            try! realm.write {
+                syncModel.deleteLock = Date()
+            }
+            let syncModelRef = ThreadSafeReference(to: syncModel)
+            let syncRecordsRef = ThreadSafeReference(to: syncRecords)
+
+            provider.request(.delete(version: modelClass.tableVersion, table: modelClass.table, view: modelClass.tableView, accessToken: token!, records: Array(syncRecords))) { result in
+                switch result {
+                case let .success(moyaResponse):
+                    let realm = try! Realm()
+                    if moyaResponse.statusCode == 200 {
+                        // As long as the status code is a success, we will delete these objects
+                        let syncRecords = realm.resolve(syncRecordsRef)!
+                        try! realm.write {
+                            realm.delete(syncRecords)
+                        }
+                    }
+                    else {
+                        log(error: "Either user was trying to delete records they can't or something went wrong with the server")
+                        reject(CommonError.permissionError)
+                    }
+                case let .failure(error):
+                    log(error: error.errorDescription!)
+                    reject(CommonError.networkConnectionError)
+                }
+
+                let syncModel = realm.resolve(syncModelRef)!
+                try! realm.write {
+                    syncModel.deleteLock = Date.distantPast
                 }
             }
         }

@@ -94,7 +94,7 @@ struct PipeEncoding: ParameterEncoding
             for propertyName in propertyNames
             {
                 var value = properties[propertyName]!
-                if let i = value.characters.index(of: "|")
+                if let i = value.index(of: "|")
                 {
                     value.remove(at: i)
                 }
