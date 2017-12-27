@@ -61,9 +61,7 @@ extension AlertDelegate {
 }
 
 func log(error: String, file: String = #file, function: String = #function, line: Int = #line) {
-    if Device.isDevice {
-        Analytics.logEvent("iOS Error", parameters: ["error": error as NSObject, "file": file as NSObject, "function": function as NSObject, "line": line as NSObject])
-    }
+    Analytics.logEvent("ios_error", parameters: ["error": error as NSObject, "file": file as NSObject, "function": function as NSObject, "line": line as NSObject])
 
     print("*** \(error) called from \(function) \(file):\(line)")
 }

@@ -103,7 +103,7 @@ public class SyncController
     }
 
     /// Instead of responding with a Promise of results, instead return the sync is ready. The reason for this is that it is more code to move the Realm response over the thread
-    func syncReady(model: ViewModel.Type, freshness: Double = 600.0, timeout: Double = 30.0) -> Promise<Void> {
+    func syncReady(model: ViewModel.Type, freshness: Double = 600.0, timeout: Double = 10.0) -> Promise<Void> {
         return Promise<Void> { resolve, reject, _ in
             let realm = try! Realm()
             guard let syncModel = realm.objects(SyncModel.self).filter(NSPredicate(format: "modelName = '\(model)'")).first else {
@@ -149,7 +149,7 @@ public class SyncController
         return Promise<Void> { resolve, reject, _ in
             let realm = try! Realm()
 
-            let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos), plugins: [NetworkLoggerPlugin(verbose: true)])
+            let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos))//, plugins: [NetworkLoggerPlugin(verbose: true)])
 
             let modelClass = model
             let model = "\(model)"
@@ -260,7 +260,7 @@ public class SyncController
     func writeSync(model: ViewModel.Type, token: String? = nil, qos: DispatchQoS.QoSClass = .utility) -> Promise<Void> {
         return Promise<Void> { resolve, reject, _ in
             let realm = try! Realm()
-            let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos), plugins: [NetworkLoggerPlugin(verbose: true)])
+            let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos))//, plugins: [NetworkLoggerPlugin(verbose: true)])
 
             let modelClass = model
             let model = "\(model)"
@@ -355,7 +355,7 @@ public class SyncController
     func deleteSync(model: ViewModel.Type, token: String? = nil, qos: DispatchQoS.QoSClass = .utility) -> Promise<Void> {
         return Promise<Void> { resolve, reject, _ in
             let realm = try! Realm()
-            let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos), plugins: [NetworkLoggerPlugin(verbose: true)])
+            let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos))//, plugins: [NetworkLoggerPlugin(verbose: true)])
 
             let modelClass = model
             let model = "\(model)"
