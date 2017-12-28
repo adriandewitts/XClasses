@@ -55,6 +55,7 @@ struct FileModel {
     let localURL: String
     let expiry: Int
     let deleteOnUpload: Bool
+    let fileUpdatedField: String?
 }
 
 // TODO: Make ViewModel thread safe for Realm
@@ -139,7 +140,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     - **uploadStatusField**
     */
     class var fileAttributes: [String: FileModel] {
-        return ["default": FileModel(bucket: "default", serverPath: "/{clientID}.png", localURL: "/{clientID}.png", expiry: 3600, deleteOnUpload: true)]
+        return ["default": FileModel(bucket: "default", serverPath: "/{clientID}.png", localURL: "/{clientID}.png", expiry: 3600, deleteOnUpload: true, fileUpdatedField: "")]
     }
 
     // End of overrides
@@ -196,7 +197,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return properties
     }
 
-    /// Imports the data from a dictionary and does the type casting that it needs to do. If it is an update put in a Realm write around the method
+    /// Imports the data from a dictionary and does the type casting that it needs to do.
     func importProperties(dictionary: [String: String], isNew: Bool)
     {
         let schemaProperties = objectSchema.properties
@@ -330,13 +331,11 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 
 
     // TODO: Add NSProgress to method
-    func getFile(key: String = "default") -> Promise<URL>
-    {
+    func getFile(key: String = "default") -> Promise<URL> {
         let selfRef = ThreadSafeReference(to: self)
         let (localURL, exists) = self.fileURL(forKey: key)
         return Promise<URL>(in: .background, { resolve, reject, _ in
-            if !exists
-            {
+            if !exists {
                 let realm = try! Realm()
                 let threadSafeSelf = realm.resolve(selfRef)!
                 let fileAttributes = type(of: self).fileAttributes[key]!
@@ -361,19 +360,16 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
                     reject(CommonError.miscellaneousNetworkError)
                 }
             }
-            else
-            {
+            else {
                 resolve(localURL)
             }
         })
     }
 
-    private func replaceOccurrence(of: String) -> String
-    {
+    private func replaceOccurrence(of: String) -> String {
         var replacement = of
         let schemaProperties = objectSchema.properties
-        for property in schemaProperties
-        {
+        for property in schemaProperties {
             replacement = replacement.replacingOccurrences(of: "{\(property.name)}", with: String(describing: self[property.name]!))
         }
 

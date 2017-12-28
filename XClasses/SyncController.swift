@@ -18,6 +18,7 @@ public class SyncModel: Object
 {
     @objc dynamic var modelName = ""
     @objc dynamic var serverSync = Date.distantPast // Server timestamp of last server sync. To be used on next sync request
+    @objc dynamic var fileSync = Date.distantPast // Timestamp of last file sync. For checking if files need updating
     @objc dynamic var readLock = Date.distantPast
     @objc dynamic var writeLock = Date.distantPast
     @objc dynamic var deleteLock = Date.distantPast
@@ -33,7 +34,8 @@ public class SyncController
 
     /// Configure sets up the meta data for each synced table
     func configure(models: [AnyClass]) {
-        var config = Realm.Configuration()
+        // Looking for a Realm Configuration in a separate Migrator class which is defined outside of the library
+        var config = Migrator.configuration
         config.fileURL = (Path.userApplicationSupport + "default.realm").url
         Realm.Configuration.defaultConfiguration = config
 
@@ -220,9 +222,10 @@ public class SyncController
 
                             let record = realm.objects(modelClass).filter(predicate).first
                             if (dict["delete"] == nil) || (dict["delete"] != "true") {
-                                if record != nil {
+                                if let record = record {
                                     try! realm.write {
-                                        record!.importProperties(dictionary: dict, isNew:false)
+                                        record.importProperties(dictionary: dict, isNew:false)
+                                        self.checkForFileUpdate(model: modelClass, syncModel: syncModel, record: record)
                                     }
                                 }
                                 else {
@@ -294,8 +297,8 @@ public class SyncController
             let syncModelRef = ThreadSafeReference(to: syncModel)            
             var syncSlice: [ViewModel] = []
             
-            // 1000 seems to get close to the 60 second limit for updates, so 500 gives it some room for error
-            let limit = 3000
+            // 1000 seems to get close to the 60 second limit for updates, so 500 gives it some room to breath
+            let limit = 500
             syncSlice.reserveCapacity(limit)
             var count = 0
             for record in syncRecords {
@@ -411,6 +414,24 @@ public class SyncController
                 let syncModel = realm.resolve(syncModelRef)!
                 try! realm.write {
                     syncModel.deleteLock = Date.distantPast
+                }
+            }
+        }
+    }
+
+    func checkForFileUpdate(model: ViewModel.Type, syncModel: SyncModel, record: ViewModel) {
+        for fileInfo in model.fileAttributes {
+            let syncModelRef = ThreadSafeReference(to: syncModel)
+            // Check if field name is not empty, check if field is later than last checked time, check if file exists
+            guard let fieldName = fileInfo.1.fileUpdatedField, fieldName.length > 0, let lastUpdated = record[fieldName] as? Date, lastUpdated > syncModel.fileSync, record.fileURL(forKey: fileInfo.0).1 else {
+                continue
+            }
+
+            record.getFile(key: fileInfo.0).then() {_ in
+                let realm = try! Realm()
+                let syncModel = realm.resolve(syncModelRef)!
+                try! realm.write {
+                    syncModel.fileSync = lastUpdated
                 }
             }
         }
