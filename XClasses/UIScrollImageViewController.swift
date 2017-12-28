@@ -87,6 +87,7 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate {
         Timer.scheduledTimer(withTimeInterval: 0.25, repeats: false) { timer in
             if let emptyView = self.emptyView, !self.emptyViewIsHidden {
                 let backingView = self.scrollView.superview!
+                //backingView.isHidden = false
                 backingView.addSubview(emptyView)
                 emptyView.frame = self.scrollView.frame
             }

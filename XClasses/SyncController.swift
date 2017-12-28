@@ -18,7 +18,6 @@ public class SyncModel: Object
 {
     @objc dynamic var modelName = ""
     @objc dynamic var serverSync = Date.distantPast // Server timestamp of last server sync. To be used on next sync request
-    @objc dynamic var fileSync = Date.distantPast // Timestamp of last file sync. For checking if files need updating
     @objc dynamic var readLock = Date.distantPast
     @objc dynamic var writeLock = Date.distantPast
     @objc dynamic var deleteLock = Date.distantPast
@@ -191,7 +190,7 @@ public class SyncController
                 switch result {
                 case let .success(moyaResponse):
                     guard moyaResponse.statusCode == 200 else {
-                        log(error: "Server returned status code \(moyaResponse.statusCode) while trying to read sync")
+                        log(error: "Server returned status code \(moyaResponse.statusCode) while trying to read sync for \(model)")
                         reject(CommonError.permissionError)
                         return
                     }
@@ -225,7 +224,6 @@ public class SyncController
                                 if let record = record {
                                     try! realm.write {
                                         record.importProperties(dictionary: dict, isNew:false)
-                                        self.checkForFileUpdate(model: modelClass, syncModel: syncModel, record: record)
                                     }
                                 }
                                 else {
@@ -344,7 +342,7 @@ public class SyncController
                         }
                     }
                     else {
-                        log(error: "Server returned status code \(moyaResponse.statusCode) while trying to write sync")
+                        log(error: "Server returned status code \(moyaResponse.statusCode) while trying to write sync for \(model)")
                         reject(CommonError.permissionError)
                     }
                 case let .failure(error):
@@ -414,24 +412,6 @@ public class SyncController
                 let syncModel = realm.resolve(syncModelRef)!
                 try! realm.write {
                     syncModel.deleteLock = Date.distantPast
-                }
-            }
-        }
-    }
-
-    func checkForFileUpdate(model: ViewModel.Type, syncModel: SyncModel, record: ViewModel) {
-        for fileInfo in model.fileAttributes {
-            let syncModelRef = ThreadSafeReference(to: syncModel)
-            // Check if field name is not empty, check if field is later than last checked time, check if file exists
-            guard let fieldName = fileInfo.1.fileUpdatedField, fieldName.length > 0, let lastUpdated = record[fieldName] as? Date, lastUpdated > syncModel.fileSync, record.fileURL(forKey: fileInfo.0).1 else {
-                continue
-            }
-
-            record.getFile(key: fileInfo.0).then() {_ in
-                let realm = try! Realm()
-                let syncModel = realm.resolve(syncModelRef)!
-                try! realm.write {
-                    syncModel.fileSync = lastUpdated
                 }
             }
         }

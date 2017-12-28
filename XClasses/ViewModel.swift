@@ -331,11 +331,11 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 
 
     // TODO: Add NSProgress to method
-    func getFile(key: String = "default") -> Promise<URL> {
+    func getFile(key: String = "default", redownload: Bool = false) -> Promise<URL> {
         let selfRef = ThreadSafeReference(to: self)
         let (localURL, exists) = self.fileURL(forKey: key)
         return Promise<URL>(in: .background, { resolve, reject, _ in
-            if !exists {
+            if !exists || redownload {
                 let realm = try! Realm()
                 let threadSafeSelf = realm.resolve(selfRef)!
                 let fileAttributes = type(of: self).fileAttributes[key]!
