@@ -342,7 +342,8 @@ public class SyncController
                         }
                     }
                     else {
-                        log(error: "Server returned status code \(moyaResponse.statusCode) while trying to write sync for \(model)")
+                        log(error: "Server returned status code \(moyaResponse.statusCode) while trying to write sync for \(model).")
+                        print(try! moyaResponse.mapString())
                         reject(CommonError.permissionError)
                     }
                 case let .failure(error):
