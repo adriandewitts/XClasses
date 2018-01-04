@@ -22,7 +22,7 @@ enum CommonError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .networkConnectionError:
-            return NSLocalizedString("We are not connected to the internet.", comment: "")
+            return NSLocalizedString("There is a problem with the internet connection.", comment: "")
         case .miscellaneousNetworkError:
             return NSLocalizedString("Something went wrong. Sorry.", comment: "")
         case .authenticationError:
@@ -40,24 +40,20 @@ enum CommonError: LocalizedError {
 }
 
 protocol AlertDelegate {
-    func presentAlert(error: Error)
-    func alertAction()
+    func presentAlert(error: Error, completion: (() -> Void)?)
 }
 
 extension AlertDelegate {
-    func presentAlert(error: Error) {
+    func presentAlert(error: Error, completion: (() -> Void)? = nil) {
         let alert = UIAlertController(title: NSLocalizedString("Alert", comment: "Title to alert user of problem"), message: error.localizedDescription, preferredStyle: .alert)
         let okAction = UIAlertAction(title: NSLocalizedString("OK", comment: ""), style: .default) { action in
-            self.alertAction()
+            completion?()
         }
         alert.addAction(okAction)
         if let viewController = self as? UIViewController {
             viewController.present(alert, animated: true)
         }
     }
-
-    /// To override and complete actions after alert is presented
-    func alertAction() { }
 }
 
 func log(error: String, file: String = #file, function: String = #function, line: Int = #line) {
