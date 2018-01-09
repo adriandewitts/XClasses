@@ -10,7 +10,7 @@ import UIKit
 
 class XUIButton: UIButton, ViewModelManagerDelegate
 {
-    var viewModel = ViewModel() as ViewModelDelegate
+    var viewModel: ViewModelDelegate!
 
     func assignViewModelToView(viewModel: ViewModelDelegate)
     {
@@ -20,14 +20,14 @@ class XUIButton: UIButton, ViewModelManagerDelegate
         //        if let imagePath = properties["image"]
         //        {
         //            imageView.contentMode = UIViewContentMode.scaleAspectFit
-        //            Nuke.loadImage(with: URL(string: imagePath)!, into: imageView)
+        //            Manager.shared.loadImage(with: URL(string: imagePath)!, into: imageView)
         //        }
     }
 }
 
 class XUIImageView: UIImageView, ViewModelManagerDelegate
 {
-    var viewModel = ViewModel() as ViewModelDelegate
+    var viewModel: ViewModelDelegate!
 }
 
 extension UIView {

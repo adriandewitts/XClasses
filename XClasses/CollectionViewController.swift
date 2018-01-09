@@ -16,7 +16,7 @@ import RealmSwift
 class CollectionViewController: UIViewController, ListAdapterDataSource, ListWorkingRangeDelegate, ViewModelManagerDelegate {
     @IBOutlet var emptyView: UIView?
     @IBOutlet var collectionView: UICollectionView!
-    var viewModel = ViewModel() as ViewModelDelegate
+    var viewModel: ViewModelDelegate!
     var viewModelCollection: Array<ViewModelDelegate> = []
     var notificationToken: NotificationToken? = nil
     var reuseIdentifier: String { return "Cell" }
@@ -28,7 +28,7 @@ class CollectionViewController: UIViewController, ListAdapterDataSource, ListWor
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        viewModel = pullViewModel(viewModel: viewModel)
+        viewModel = FlowController.viewModel
 
         adapter.collectionView = collectionView
         adapter.dataSource = self as ListAdapterDataSource
@@ -50,7 +50,7 @@ class CollectionViewController: UIViewController, ListAdapterDataSource, ListWor
 
     override func prepare(for segue: UIStoryboardSegue, sender: Any?)
     {
-        XUIFlowController.sharedInstance.viewModel = (sender as! CollectionViewCell).viewModel
+        FlowController.shared.viewModel = (sender as! CollectionViewCell).viewModel
     }
 
     func objects(for listAdapter: ListAdapter) -> [ListDiffable] {
@@ -140,17 +140,16 @@ class DefaultSectionController: ListSectionController {
 
 class CollectionViewCell: UICollectionViewCell, ViewModelManagerDelegate
 {
-    var viewModel = ViewModel() as ViewModelDelegate
+    var viewModel: ViewModelDelegate!
     @IBOutlet var imageView: XUIImageView!
 
     func assignViewModelToView(viewModel: ViewModelDelegate)
     {
         self.viewModel = viewModel
         let properties = viewModel.properties
-        if let imagePath = properties["image"]
-        {
+        if let imagePath = properties["image"] {
             imageView.contentMode = UIViewContentMode.scaleAspectFit
-            Nuke.loadImage(with: URL(string: imagePath)!, into: imageView)
+            Manager.shared.loadImage(with: URL(string: imagePath)!, into: imageView)
         }
     }
 }

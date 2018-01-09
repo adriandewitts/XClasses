@@ -27,16 +27,14 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate {
         super.viewDidLoad()
 
         // Load in image from viewModel
-        if let imageURL = viewModel.properties["image"]
-        {
-            Nuke.loadImage(with: URL(string: imageURL)!, into: imageView)
+        if let imageURL = viewModel.properties["image"] {
+            Manager.shared.loadImage(with: URL(string: imageURL)!, into: imageView)
             //TODO: When loaded reset zoom
         }
 
         // Setup rest of ImageView with behaviours
 
-        if UIScreen.main.traitCollection.userInterfaceIdiom == .phone
-        {
+        if UIScreen.main.traitCollection.userInterfaceIdiom == .phone {
             navigationController?.setNavigationBarHidden(true, animated: true)
         }
 
@@ -61,8 +59,7 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate {
 //        resetZoom(at: scrollView.bounds.size)
 //    }
 
-    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator)
-    {
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         super.viewWillTransition(to: size, with: coordinator)
         resetZoom(at: size)
     }
@@ -99,21 +96,6 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate {
         emptyViewIsHidden = true
     }
 
-    /// Setup wait animation centred in scrollview. Will wait 0.25 seconds to run and checks if image has already loaded.
-//    func waitAnimation()
-//    {
-//        Timer.scheduledTimer(withTimeInterval: 0.25, repeats: false) { timer in
-//            //TODO: Fix this - window is not set
-//            if self.imageView.image == nil, self.waitView == nil, let window = UIApplication.shared.keyWindow {
-//                self.waitView = UIImageView(frame: self.waitViewRect)
-//                self.waitView?.center = window.convert(window.center, from: window)
-//                self.scrollView.addSubview(self.waitView!)
-//            }
-//
-//            self.waitView?.image = UIImage.animatedImageNamed(self.waitAnimationFileName, duration: self.waitAnimationDuration)
-//        }
-//    }
-
     // Gestures
 
     @objc func toggleNavigation(tapGesture: UITapGestureRecognizer)
@@ -123,16 +105,14 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate {
 
     @objc func zoomView(tapGesture: UITapGestureRecognizer)
     {
-        if (scrollView.zoomScale == scrollView.minimumZoomScale)
-        {
+        if (scrollView.zoomScale == scrollView.minimumZoomScale) {
             // Zoom in
             let center = tapGesture.location(in: scrollView)
             let size = imageView.frame.size
             let zoomRect = CGRect(x: center.x, y: center.y, width: (size.width / 2), height: (size.height / 2))
             scrollView.zoom(to: zoomRect, animated: true)
         }
-        else
-        {
+        else {
             // Zoom out
             scrollView.setZoomScale(scrollView.minimumZoomScale, animated: true)
         }
@@ -140,8 +120,7 @@ class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate {
 
     // Delegate
 
-    func viewForZooming(in scrollView: UIScrollView) -> UIView?
-    {
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? {
         return imageView
     }
 }

@@ -12,7 +12,7 @@ import UIKit
 
 class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSource, UIPageViewControllerDelegate, ViewModelManagerDelegate
 {
-    var viewModel = ViewModel() as ViewModelDelegate
+    var viewModel: ViewModelDelegate!
     var viewModelCollection: [ViewModelDelegate] = []
     var pageControllerStoryBoardID = "ScrollImageViewID"
 
@@ -22,7 +22,7 @@ class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSourc
         dataSource = self
         delegate = self
 
-        viewModel = pullViewModel(viewModel: viewModel)
+        viewModel = FlowController.viewModel
         viewModelCollection = viewModel.relatedCollection as! Array<ViewModelDelegate>
 
         if let firstViewModel = viewModelCollection.first {

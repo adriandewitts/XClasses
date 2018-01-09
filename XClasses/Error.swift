@@ -57,7 +57,9 @@ extension AlertDelegate {
 }
 
 func log(error: String, file: String = #file, function: String = #function, line: Int = #line) {
-    Analytics.logEvent("ios_error", parameters: ["error": error as NSObject, "file": file as NSObject, "function": function as NSObject, "line": line as NSObject])
+    let fileName = file.split(separator: "/").last?.split(separator: ".").first ?? "Unknown"
+    let crashlyticsError = NSError(domain: "iOS.\(fileName).\(function)", code: line, userInfo: ["description": error])
+    Crashlytics.sharedInstance().recordError(crashlyticsError)
 
-    print("*** \(error) called from \(function) \(file):\(line)")
+    print("*** \(error) Called from \(function) \(file): \(line)")
 }
