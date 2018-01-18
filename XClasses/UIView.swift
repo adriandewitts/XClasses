@@ -12,8 +12,7 @@ class XUIButton: UIButton, ViewModelManagerDelegate
 {
     var viewModel: ViewModelDelegate!
 
-    func assignViewModelToView(viewModel: ViewModelDelegate)
-    {
+    func assignViewModelToView(viewModel: ViewModelDelegate) {
         self.viewModel = viewModel
         // TODO: Set image and text
         //        let properties = viewModel.properties
@@ -25,13 +24,11 @@ class XUIButton: UIButton, ViewModelManagerDelegate
     }
 }
 
-class XUIImageView: UIImageView, ViewModelManagerDelegate
-{
+class XUIImageView: UIImageView, ViewModelManagerDelegate {
     var viewModel: ViewModelDelegate!
 }
 
 extension UIView {
-
     @IBInspectable var cornerRadius: CGFloat {
         get {
             return layer.cornerRadius

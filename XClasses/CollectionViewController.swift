@@ -50,7 +50,11 @@ class CollectionViewController: UIViewController, ListAdapterDataSource, ListWor
 
     override func prepare(for segue: UIStoryboardSegue, sender: Any?)
     {
-        FlowController.shared.viewModel = (sender as! CollectionViewCell).viewModel
+        let cell = sender as! CollectionViewCell
+        FlowController.viewModel = cell.viewModel
+        if let transitionImage = cell.imageView.image {
+            FlowController.shared.transitionImage = transitionImage
+        }
     }
 
     func objects(for listAdapter: ListAdapter) -> [ListDiffable] {
@@ -92,8 +96,6 @@ class DefaultSectionController: ListSectionController {
         self.viewModel = viewModel
         super.init()
 
-//        let collectionViewController = viewController as! CollectionViewController
-//        let flowLayout = collectionViewController.collectionView.collectionViewLayout as! ListCollectionViewLayout
         self.inset = sectionInset
     }
 

@@ -40,8 +40,9 @@ class PDFDocument {
         cachedImages.countLimit = cacheImageCount
     }
 
+    /// Get UIImage of specific page. Will call cachePages.
     func pdfPageImage(pageNumber: Int, size: CGSize = UIScreen.main.bounds.size) -> Promise<UIImage> {
-        return Promise<UIImage> { resolve, reject, _ in
+        return Promise<UIImage>(in: .userInitiated) { resolve, reject, _ in
             self.cachePages(pageNumber: pageNumber, size: size)
             if let image = self.cachedImages.object(forKey: NSNumber(value: pageNumber)) {
                 resolve(image)
@@ -55,7 +56,7 @@ class PDFDocument {
     func cachePages(pageNumber: Int, size: CGSize = UIScreen.main.bounds.size) {
         cachePage(pageNumber: pageNumber, size: size)
         
-        let queue = DispatchQueue(label: "caching", qos: DispatchQoS.utility)
+        let queue = DispatchQueue(label: "caching", qos: DispatchQoS.default)
         queue.async {
             self.cachePage(pageNumber: pageNumber + 1, size: size)
             self.cachePage(pageNumber: pageNumber - 1, size: size)
@@ -66,11 +67,14 @@ class PDFDocument {
         let n = NSNumber(value: pageNumber)
         let cachedImage = cachedImages.object(forKey: n)
         // TODO: if Sizes are different then recache
-        guard pageNumber >= 1, pdfDocument != nil, pageNumber <= pdfDocument!.numberOfPages, cachedImage == nil else {
+        guard let pdfDocument = pdfDocument, pageNumber >= 1, pageNumber <= pdfDocument.numberOfPages, cachedImage == nil else {
+//            if pageNumber < 1 {
+//                print("Warning: Page numbers out of bounds in cachePage in PDFDocument")
+//            }
             return
         }
 
-        if let image = pdfDocument?.imageFromPage(number: pageNumber, with: size) {
+        if let image = pdfDocument.imageFromPage(number: pageNumber, with: size) {
             cachedImages.setObject(image, forKey: n)
         }
     }

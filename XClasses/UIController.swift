@@ -20,6 +20,7 @@ protocol ViewModelManagerDelegate {
     var viewModel: ViewModelDelegate! { get set }
 }
 
+/// The first ViewModel has to be set before the ViewModel is accessed
 class FlowController: ViewModelManagerDelegate {
     static let shared = FlowController()
     var viewModel: ViewModelDelegate!
@@ -34,23 +35,6 @@ class FlowController: ViewModelManagerDelegate {
         }
     }
 }
-
-//func pullViewModel(viewModel: ViewModelDelegate) -> ViewModelDelegate {
-//    let flowController = FlowController.shared
-//    var vm = viewModel
-//
-//    if String(describing: type(of: viewModel)) == "ViewModel" {
-//        vm = flowController.viewModel
-//    }
-//
-//    return vm
-//}
-
-// TODO: Change to below
-//func pull() -> ViewModelDelegate
-//{
-//    return XUIFlowController.sharedInstance.viewModel
-//}
 
 class XUIViewController: UIViewController, ViewModelManagerDelegate {
     var viewModel: ViewModelDelegate!
