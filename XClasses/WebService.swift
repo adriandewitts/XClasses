@@ -23,10 +23,10 @@ extension WebService: TargetType
         return ["Content-type": "application/csv"]
     }
 
-    // TODO: switch to db.bookbotkids.com when it has SSL
-    var baseURL: URL { return URL(string: "https://db-dot-bookbot-162503.appspot.com")! }
+    var baseURL: URL {
+        return Configuration.baseURL
+    }
     //var baseURL: URL { return URL(string: "http://localhost:8080")! }
-
 
     var path: String {
         switch self {

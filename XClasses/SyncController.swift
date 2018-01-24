@@ -103,20 +103,23 @@ public class SyncController
         }
     }
 
-    /// Instead of responding with a Promise of results, instead return the sync is ready. The reason for this is that it is more code to move the Realm response over the thread
-    func syncReady(model: ViewModel.Type, freshness: Double = 600.0, timeout: Double = 10.0) -> Promise<Void> {
+    /// Instead of responding with a Promise of results, instead return the sync is ready. The reason for this is that it is more code to move the Realm response over the thread. Will also force the request and ignore the sync lock.
+    func syncReady(model: ViewModel.Type, freshness: Double = 600.0, timeout: Double = 60.0) -> Promise<Void> {
         return Promise<Void> { resolve, reject, _ in
+            // Get Sync Model (must be configured and ready)
             let realm = try! Realm()
             guard let syncModel = realm.objects(SyncModel.self).filter(NSPredicate(format: "modelName = '\(model)'")).first else {
                 reject(CommonError.unexpectedError)
                 return
             }
 
+            // Is the sync fresh and there is record, then resolve
             let interval = syncModel.serverSync.timeIntervalSince(Date())
             if interval < freshness && !model.empty {
                 resolve(Void())
             }
 
+            // If not retry
             self.retrySync(model: model).timeout(in: .userInitiated, timeout: timeout, error: CommonError.timeoutError).then() { _ in
                 resolve(Void())
             }.catch() { error in
@@ -130,13 +133,13 @@ public class SyncController
     {
         return Promise<Void> { resolve, reject, _ in
             self.token().then() { token in
-                self.readSync(model: model, token: token, qos: .userInitiated).retry(SyncController.retries) {_,_ in sleep(SyncController.retrySleep); return true }.then { _ in
+                self.readSync(model: model, token: token, forceRequest: true, qos: .userInitiated).retry(SyncController.retries) {_,_ in sleep(SyncController.retrySleep); return true }.then { _ in
                     resolve(Void())
                 }.catch { error in
                     reject(error)
                 }
             }.catch() { _ in
-                self.readSync(model: model, token: nil, qos: .userInitiated).retry(SyncController.retries) {_,_ in sleep(SyncController.retrySleep); return true }.then { _ in
+                self.readSync(model: model, token: nil, forceRequest: true, qos: .userInitiated).retry(SyncController.retries) {_,_ in sleep(SyncController.retrySleep); return true }.then { _ in
                     resolve(Void())
                 }.catch { error in
                     reject(error)
@@ -146,7 +149,7 @@ public class SyncController
     }
 
     /// Read sync make a request to the web service and stores new record to the local DB. Will also mark records for deletion
-    func readSync(model: ViewModel.Type, token: String? = nil, qos: DispatchQoS.QoSClass = .utility) -> Promise<Void> {
+    func readSync(model: ViewModel.Type, token: String? = nil, forceRequest: Bool = false, qos: DispatchQoS.QoSClass = .utility) -> Promise<Void> {
         return Promise<Void> { resolve, reject, _ in
             let realm = try! Realm()
 
@@ -155,10 +158,11 @@ public class SyncController
             let modelClass = model
             let model = "\(model)"
 
-            // Make sure model is not sync locked
+            // Get model
             let minuteAgo = Date.init(timeIntervalSinceNow: -SyncController.serverTimeout)
-            var predicate = NSPredicate(format: "modelName = '\(model)' AND readLock < %@", minuteAgo as CVarArg)
+            var predicate = forceRequest ? NSPredicate(format: "modelName = '\(model)'") : NSPredicate(format: "modelName = '\(model)' AND readLock < %@", minuteAgo as CVarArg)
             guard let syncModel = realm.objects(SyncModel.self).filter(predicate).first else {
+                // Error could be because sync is misconfigured
                 reject(CommonError.syncLockError)
                 return
             }
@@ -170,6 +174,7 @@ public class SyncController
                 return
             }
 
+            // Make sync locked
             var timestamp = Date.distantPast
             try! realm.write { syncModel.readLock = Date() }
             let syncModelRef = ThreadSafeReference(to: syncModel)
@@ -249,7 +254,7 @@ public class SyncController
                         reject(CommonError.miscellaneousNetworkError)
                     }
                 case let .failure(error):
-                    log(error: "Server connectivity error\(error.localizedDescription)")
+                    log(error: "Server connectivity error \(error.localizedDescription)")
                     reject(CommonError.networkConnectionError)
                 }
 

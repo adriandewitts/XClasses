@@ -104,7 +104,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return false
     }
 
-    /// Needs authentication before reading or writing to server
+    /// Needs authentication before reading from server
     class var authenticate: Bool {
         return false
     }

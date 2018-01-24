@@ -18,6 +18,7 @@ enum CommonError: LocalizedError {
     case timeoutError
     case permissionError
     case syncLockError
+    case microphonePermissionError
 
     public var errorDescription: String? {
         switch self {
@@ -28,30 +29,16 @@ enum CommonError: LocalizedError {
         case .authenticationError:
             return NSLocalizedString("There was a problem logging in.", comment: "")
         case .unexpectedError:
-            return NSLocalizedString("There is an unexpected problem.", comment: "")
+            return NSLocalizedString("There was an unexpected problem.", comment: "")
         case .timeoutError:
             return NSLocalizedString("This is taking too long. We have stopped.", comment: "")
         case .permissionError:
             return NSLocalizedString("You do not have access.", comment: "")
         case .syncLockError:
             return NSLocalizedString("Please wait a little while before trying again.", comment: "")
-        }
-    }
-}
-
-protocol AlertDelegate {
-    func presentAlert(error: Error, completion: (() -> Void)?)
-}
-
-extension AlertDelegate {
-    func presentAlert(error: Error, completion: (() -> Void)? = nil) {
-        let alert = UIAlertController(title: NSLocalizedString("Alert", comment: "Title to alert user of problem"), message: error.localizedDescription, preferredStyle: .alert)
-        let okAction = UIAlertAction(title: NSLocalizedString("OK", comment: ""), style: .default) { action in
-            completion?()
-        }
-        alert.addAction(okAction)
-        if let viewController = self as? UIViewController {
-            viewController.present(alert, animated: true)
+        case .microphonePermissionError:
+            let appName = Bundle.main.infoDictionary![kCFBundleNameKey as String] as! String
+            return NSLocalizedString("\(appName) needs the microphone to work. Go to the Settings app and select \(appName). Then turn on the Microphone.", comment: "")
         }
     }
 }
@@ -63,3 +50,47 @@ func log(error: String, file: String = #file, function: String = #function, line
 
     print("*** \(error) Called from \(function) \(file): \(line)")
 }
+
+protocol AlertDelegate {
+    func presentAlert(error: Error, image: UIImage?, completion: (() -> Void)?)
+}
+
+extension AlertDelegate {
+    func presentAlert(error: Error, image: UIImage? = nil, completion: (() -> Void)? = nil) {
+        let alert = UIAlertController(title: NSLocalizedString("Alert", comment: "Title to alert user of problem"), message: error.localizedDescription, preferredStyle: .alert)
+
+        if let image = image {
+            let uiImageAlertAction = UIAlertAction(title: "", style: .default, handler: nil)
+            uiImageAlertAction.setValue(image.withRenderingMode(.alwaysOriginal), forKey: "image")
+            alert.addAction(uiImageAlertAction)
+        }
+
+        let okAction = UIAlertAction(title: NSLocalizedString("OK", comment: ""), style: .default) { action in
+            completion?()
+        }
+        alert.addAction(okAction)
+
+        if let viewController = self as? UIViewController {
+            viewController.present(alert, animated: true)
+        }
+    }
+}
+
+//let uiAlertControl = UIAlertController(title: "Photo", message: "Photo of the Day", preferredStyle: .alert)
+//
+//
+//let uiImageAlertAction = UIAlertAction(title: "", style: .default, handler: nil)
+//let image = #imageLiteral(resourceName: "StockSnap_AWEH8SQCHN")
+//
+//// size the image
+//let maxsize =  CGSize(width: 245, height: 300)
+//
+//let scaleSze = CGSize(width: 245, height: 245/image.size.width*image.size.height)
+//let reSizedImage = image.resize(newSize: scaleSze)
+//
+//uiImageAlertAction.setValue(reSizedImage.withRenderingMode(.alwaysOriginal), forKey: "image")
+//uiAlertControl.addAction(uiImageAlertAction)
+//
+//uiAlertControl.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+//self.present(uiAlertControl, animated: true, completion: nil)
+
