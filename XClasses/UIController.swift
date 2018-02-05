@@ -36,12 +36,49 @@ class FlowController: ViewModelManagerDelegate {
     }
 }
 
-class XUIViewController: UIViewController, ViewModelManagerDelegate {
+class ViewController: UIViewController, ViewModelManagerDelegate {
     var viewModel: ViewModelDelegate!
+    @IBOutlet var bottomConstraint: NSLayoutConstraint?
 
     required init?(coder aDecoder: NSCoder) {
         viewModel = FlowController.viewModel
         super.init(coder: aDecoder)
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow), name: .UIKeyboardWillShow, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide), name: .UIKeyboardWillHide, object: nil)
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        NotificationCenter.default.removeObserver(self, name: .UIKeyboardWillShow, object: nil)
+        NotificationCenter.default.removeObserver(self, name: .UIKeyboardWillHide, object: nil)
+    }
+
+    @objc func keyboardWillShow(notification: NSNotification) {
+        updateConstraint(notification: notification)
+    }
+
+    @objc func keyboardWillHide(notification: NSNotification) {
+        updateConstraint(notification: notification)
+    }
+
+    func updateConstraint(notification: NSNotification) {
+        if let bottomConstraint = bottomConstraint, let userInfo = notification.userInfo {
+            guard let animationDuration = (userInfo[UIKeyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue, let keyboardFrame = (userInfo[UIKeyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue else {
+                return
+            }
+            let rawAnimationCurve = (userInfo[UIKeyboardAnimationCurveUserInfoKey] as! NSNumber).uintValue << 16
+            let animationCurve = UIViewAnimationOptions(rawValue: rawAnimationCurve)
+
+            bottomConstraint.constant = -keyboardFrame.size.height
+
+            UIView.animate(withDuration: animationDuration, delay: 0.0, options: [.beginFromCurrentState, animationCurve], animations: {
+                self.view.layoutIfNeeded()
+            }, completion: nil)
+        }
     }
 }
 

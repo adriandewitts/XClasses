@@ -8,7 +8,7 @@
 import UIKit
 import Nuke
 
-class UIScrollImageViewController: XUIViewController, UIScrollViewDelegate {
+class UIScrollImageViewController: ViewController, UIScrollViewDelegate {
     @IBOutlet var emptyView: UIView?
     @IBOutlet var scrollView: UIScrollView!
     @IBOutlet var imageView: UIImageView!
