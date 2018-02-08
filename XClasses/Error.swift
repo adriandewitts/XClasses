@@ -19,6 +19,7 @@ enum CommonError: LocalizedError {
     case permissionError
     case syncLockError
     case microphonePermissionError
+    case emptyField
 
     public var errorDescription: String? {
         switch self {
@@ -39,6 +40,8 @@ enum CommonError: LocalizedError {
         case .microphonePermissionError:
             let appName = Bundle.main.infoDictionary![kCFBundleNameKey as String] as! String
             return NSLocalizedString("\(appName) needs the microphone to work. Go to the Settings app and select \(appName). Then turn on the Microphone.", comment: "")
+        case .emptyField:
+            return NSLocalizedString("Field is empty.", comment: "")
         }
     }
 }
@@ -52,17 +55,28 @@ func log(error: String, file: String = #file, function: String = #function, line
 }
 
 protocol AlertDelegate {
-    func presentAlert(error: Error, image: UIImage?, completion: (() -> Void)?)
+    func presentErrorAlert(error: Error, image: UIImage?, completion: (() -> Void)?)
+    func presentAlert(title: String, image: UIImage?, cancel: Bool, completion: (() -> Void)?)
 }
 
 extension AlertDelegate {
-    func presentAlert(error: Error, image: UIImage? = nil, completion: (() -> Void)? = nil) {
-        let alert = UIAlertController(title: NSLocalizedString("Alert", comment: "Title to alert user of problem"), message: error.localizedDescription, preferredStyle: .alert)
+    func presentErrorAlert(error: Error, image: UIImage? = nil, completion: (() -> Void)? = nil) {
+        presentAlert(title: error.localizedDescription, image: image, cancel: false) {
+            completion?()
+        }
+    }
+
+    func presentAlert(title: String, image: UIImage? = nil, cancel: Bool = false, completion: (() -> Void)? = nil) {
+        let alert = UIAlertController(title: title, message: "", preferredStyle: .alert)
 
         if let image = image {
             let uiImageAlertAction = UIAlertAction(title: "", style: .default, handler: nil)
             uiImageAlertAction.setValue(image.withRenderingMode(.alwaysOriginal), forKey: "image")
             alert.addAction(uiImageAlertAction)
+        }
+
+        if cancel {
+            alert.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: ""), style: .default))
         }
 
         let okAction = UIAlertAction(title: NSLocalizedString("OK", comment: ""), style: .default) { action in

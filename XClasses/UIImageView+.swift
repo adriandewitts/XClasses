@@ -9,14 +9,32 @@
 import Foundation
 
 extension UIImageView {
-    @IBInspectable var animation: String? {
-        set (newValue) {
-            if let value = newValue {
-                self.image = UIImage.animatedImageNamed(value, duration: self.value(forKey: "animationDuration") as! TimeInterval)
+    @IBInspectable var animatedImageName: String? {
+        set (value) {
+            if let value = value {
+                let animationImages = UIImage.animatedImageNamed(value, duration: 0.0)?.images
+                self.animationImages = animationImages
+                self.image = animationImages?.first
             }
         }
+
         get {
             return nil
         }
     }
+
+    @IBInspectable var animationStart: Double {
+        set (value) {
+            Timer.scheduledTimer(withTimeInterval: value, repeats: false) { _ in
+                self.startAnimating()
+            }
+        }
+
+        get {
+            return 0.0
+        }
+    }
 }
+
+
+
