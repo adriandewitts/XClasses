@@ -21,6 +21,13 @@ public class SyncModel: Object
     @objc dynamic var readLock = Date.distantPast
     @objc dynamic var writeLock = Date.distantPast
     @objc dynamic var deleteLock = Date.distantPast
+
+    class func named(_ model: String) -> SyncModel? {
+        guard let realm = getRealm() else {
+            return nil
+        }
+        return realm.objects(SyncModel.self).filter(NSPredicate(format: "modelName = '\(model)'")).first
+    }
 }
 
 public class SyncController
@@ -36,14 +43,18 @@ public class SyncController
         // Looking for a Realm Configuration in a separate Migrator class which is defined outside of the library
         var config = Migrator.configuration
         config.fileURL = (Path.userApplicationSupport + "default.realm").url
+        config.shouldCompactOnLaunch = { totalBytes, usedBytes in
+            // Compact if the file is over 100MB in size and less than 50% 'used'
+            let oneHundredMB = 100 * 1024 * 1024
+            return (totalBytes > oneHundredMB) && (Double(usedBytes) / Double(totalBytes)) < 0.5
+        }
         Realm.Configuration.defaultConfiguration = config
 
-        let realm = try! Realm()
-
-        for m in models {
-            let model = "\(m)"
-            if realm.objects(SyncModel.self).filter("modelName = '\(model)'").count == 0 {
-                try! realm.write { realm.add(SyncModel(value: ["modelName": model])) }
+        // New Synmodel if it does not exist
+        for model in models {
+            let model = "\(model)"
+            if SyncModel.named(model) == nil {
+                add(SyncModel(value: ["modelName": model]))
             }
         }
 
@@ -107,8 +118,7 @@ public class SyncController
     func syncReady(model: ViewModel.Type, freshness: Double = 600.0, timeout: Double = 60.0) -> Promise<Void> {
         return Promise<Void> { resolve, reject, _ in
             // Get Sync Model (must be configured and ready)
-            let realm = try! Realm()
-            guard let syncModel = realm.objects(SyncModel.self).filter(NSPredicate(format: "modelName = '\(model)'")).first else {
+            guard let syncModel = SyncModel.named("\(model)") else {
                 reject(CommonError.unexpectedError)
                 return
             }
@@ -151,18 +161,12 @@ public class SyncController
     /// Read sync make a request to the web service and stores new record to the local DB. Will also mark records for deletion
     func readSync(model: ViewModel.Type, token: String? = nil, forceRequest: Bool = false, qos: DispatchQoS.QoSClass = .utility) -> Promise<Void> {
         return Promise<Void> { resolve, reject, _ in
-            let realm = try! Realm()
-
-            let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos))//, plugins: [NetworkLoggerPlugin(verbose: true)])
-
             let modelClass = model
             let model = "\(model)"
 
             // Get model
             let minuteAgo = Date.init(timeIntervalSinceNow: -SyncController.serverTimeout)
-            var predicate = forceRequest ? NSPredicate(format: "modelName = '\(model)'") : NSPredicate(format: "modelName = '\(model)' AND readLock < %@", minuteAgo as CVarArg)
-            guard let syncModel = realm.objects(SyncModel.self).filter(predicate).first else {
-                // Error could be because sync is misconfigured
+            guard let syncModel = SyncModel.named(model), syncModel.readLock < minuteAgo else {
                 reject(CommonError.syncLockError)
                 return
             }
@@ -176,19 +180,20 @@ public class SyncController
 
             // Make sync locked
             var timestamp = Date.distantPast
-            try! realm.write { syncModel.readLock = Date() }
-            let syncModelRef = ThreadSafeReference(to: syncModel)
+            update() {
+                syncModel.readLock = Date()
+            }
 
             // Make request with Moya
+            let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos))//, plugins: [NetworkLoggerPlugin(verbose: true)])
             provider.request(.read(version: modelClass.tableVersion, table: modelClass.table, view: modelClass.tableView, accessToken: token, lastTimestamp: syncModel.serverSync, predicate: nil)) { result in
-                // Local realm needed for thread
-                let realm = try! Realm()
 
                 defer {
-                    let syncModel = realm.resolve(syncModelRef)!
-                    try! realm.write {
-                        syncModel.readLock = Date.distantPast
-                        syncModel.serverSync = timestamp
+                    if let syncModel = SyncModel.named(model) {
+                        update() {
+                            syncModel.readLock = Date.distantPast
+                            syncModel.serverSync = timestamp
+                        }
                     }
                 }
 
@@ -199,8 +204,8 @@ public class SyncController
                         reject(CommonError.permissionError)
                         return
                     }
-                    do
-                    {
+
+                    do {
                         let response = try moyaResponse.mapString()
                         let l = response.components(separatedBy: "\n")
                         let meta = l[0].components(separatedBy: "|")
@@ -212,42 +217,32 @@ public class SyncController
                         var newRecords: [Object] = []
                         newRecords.reserveCapacity(lines.count)
 
-                        for line in lines
-                        {
+                        for line in lines {
                             let components = line.components(separatedBy: "|")
                             let id = components[idIndex]
-                            predicate = NSPredicate(format: "id = \(id)")
 
                             var dict = [String: String]()
-                            for (index, property) in header.enumerated()
-                            {
+                            for (index, property) in header.enumerated() {
                                 dict[property] = components[index]
                             }
 
-                            let record = realm.objects(modelClass).filter(predicate).first
-                            if (dict["delete"] == nil) || (dict["delete"] != "true") {
-                                if let record = record {
-                                    try! realm.write {
+                            if let record = modelClass.find(NSPredicate(format: "id = \(id)")).first {
+                                update {
+                                    if (dict["delete"] == nil) || (dict["delete"] != "true") {
                                         record.importProperties(dictionary: dict, isNew:false)
                                     }
-                                }
-                                else {
-                                    let record = modelClass.init()
-                                    record.importProperties(dictionary: dict, isNew: true)
-                                    newRecords.append(record)
-                                }
-                            }
-                            else {
-                                try! realm.write {
-                                    if let record = record {
+                                    else {
                                         record._deleted = true
                                     }
                                 }
                             }
+                            else {
+                                let record = modelClass.init()
+                                record.importProperties(dictionary: dict, isNew: true)
+                                newRecords.append(record)
+                            }
                         }
-                        try! realm.write {
-                            realm.add(newRecords)
-                        }
+                        add(newRecords)
                     }
                     catch {
                         log(error: "Response was impossibly incorrect")

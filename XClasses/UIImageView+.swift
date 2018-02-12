@@ -15,6 +15,7 @@ extension UIImageView {
                 let animationImages = UIImage.animatedImageNamed(value, duration: 0.0)?.images
                 self.animationImages = animationImages
                 self.image = animationImages?.first
+                self.animationDuration = Double(self.animationImages!.count) / 24
             }
         }
 

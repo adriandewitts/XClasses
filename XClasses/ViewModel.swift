@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import Realm
 import RealmSwift
 import Firebase
 import FirebaseStorage
@@ -19,27 +18,6 @@ import Hydra
 protocol ViewModelDelegate {
     var properties: [String: String]  { get }
     var relatedCollection: Any { get }
-}
-
-class RealmString: Object {
-    @objc dynamic var stringValue = ""
-
-    init(stringValue: String) {
-        super.init()
-        self.stringValue = stringValue
-    }
-    
-    required init(realm: RLMRealm, schema: RLMObjectSchema) {
-        super.init(realm: realm, schema: schema)
-    }
-    
-    required init() {
-        super.init()
-    }
-    
-    required init(value: Any, schema: RLMSchema) {
-        super.init(value: value, schema: schema)
-    }
 }
 
 enum SyncStatus: Int {
@@ -58,7 +36,8 @@ struct FileModel {
     let fileUpdatedField: String?
 }
 
-// TODO: Make ViewModel thread safe for Realm
+// TODO: Record cleanup - periodically - when a certain age
+// TODO: File cleanup after certain age
 
 public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     static let tryAgain = 60.0
@@ -94,17 +73,17 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return "default"
     }
 
-    /// Can read from service
+    // Can read from service
     class var read: Bool {
         return true
     }
 
-    /// Can write to service
+    // Can write to service
     class var write: Bool {
         return false
     }
 
-    /// Needs authentication before reading from server
+    // Needs authentication before reading from server
     class var authenticate: Bool {
         return false
     }
@@ -154,9 +133,10 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return self.count == 0
     }
 
-    /// Return results of query
-    class func find(query: NSPredicate? = nil, orderBy: String? = nil, orderAscending: Bool = false) -> Results<ViewModel> {
-        let realm = try! Realm()
+    // Return results of query
+    class func find(_ query: NSPredicate? = nil, orderBy: String? = nil, orderAscending: Bool = false) -> Results<ViewModel> {
+        // Realm one day might have empty results so we can get rid of force unwrapping 
+        let realm = getRealm()!
         var result = realm.objects(self).filter(NSPredicate(format: "_deleted = false"))
         if query != nil {
             result = result.filter(query!)
@@ -376,11 +356,3 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return replacement.replacingOccurrences(of: "{uid}", with: SyncController.sharedInstance.uid)
     }
 }
-
-
-// TODO: Record cleanup - periodically - when a certain age
-// TODO: File cleanup after certain age
-
-// File jobs and status
-// model, clientID, progress, lastProgressTime
-// status: toTransfer, transferring, transferred, pause?
