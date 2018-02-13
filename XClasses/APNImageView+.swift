@@ -7,15 +7,13 @@
 //
 
 import Foundation
+import APNGKit
 
-extension UIImageView {
-    @IBInspectable var animatedImageName: String? {
+extension APNGImageView {
+    @IBInspectable var animationName: String? {
         set (value) {
             if let value = value {
-                let animationImages = UIImage.animatedImageNamed(value, duration: 0.0)?.images
-                self.animationImages = animationImages
-                self.image = animationImages?.first
-                self.animationDuration = Double(self.animationImages!.count) / 24
+                self.image = APNGImage(named: value, progressive: true)
             }
         }
 
@@ -36,6 +34,5 @@ extension UIImageView {
         }
     }
 }
-
 
 
