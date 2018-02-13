@@ -23,70 +23,77 @@ func getRealm() -> Realm? {
 }
 
 func add(_ object: Object) {
-    autoreleasepool {
-        guard let realm = getRealm() else {
-            return
-        }
+    guard let realm = getRealm() else {
+        return
+    }
 
-        do {
-            try realm.write {
-                realm.add(object)
-            }
+    do {
+        try realm.write {
+            realm.add(object)
         }
-        catch {
-            log(error: error.localizedDescription)
-        }
+    }
+    catch {
+        log(error: error.localizedDescription)
     }
 }
 
 func add<S: Sequence>(_ objects: S) where S.Iterator.Element: Object {
-    autoreleasepool {
-        guard let realm = getRealm() else {
-            return
-        }
+    guard let realm = getRealm() else {
+        return
+    }
 
-        do {
-            try realm.write {
-                realm.add(objects)
-            }
+    do {
+        try realm.write {
+            realm.add(objects)
         }
-        catch {
-            log(error: error.localizedDescription)
-        }
+    }
+    catch {
+        log(error: error.localizedDescription)
     }
 }
 
 func update(block: ()->()) {
-    autoreleasepool {
-        guard let realm = getRealm() else {
-            return
-        }
+    guard let realm = getRealm() else {
+        return
+    }
 
-        do {
-            try realm.write {
-                block()
-            }
+    do {
+        try realm.write {
+            block()
         }
-        catch {
-            log(error: error.localizedDescription)
-        }
+    }
+    catch {
+        log(error: error.localizedDescription)
     }
 }
 
 func delete(_ object: Object) {
-    autoreleasepool {
-        guard let realm = getRealm() else {
-            return
-        }
+    guard let realm = getRealm() else {
+        return
+    }
 
-        do {
-            try realm.write {
-                realm.delete(object)
-            }
+    do {
+        try realm.write {
+            realm.delete(object)
         }
-        catch {
-            log(error: error.localizedDescription)
+    }
+    catch {
+        log(error: error.localizedDescription)
+    }
+}
+
+func delete<S: Sequence>(_ objects: S) where S.Iterator.Element: Object {
+    guard let realm = getRealm() else {
+        return
+    }
+
+    do {
+        try realm.write {
+            realm.delete(objects)
         }
+    }
+    catch {
+        log(error: error.localizedDescription)
     }
 }
 

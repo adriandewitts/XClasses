@@ -135,7 +135,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 
     // Return results of query
     class func find(_ query: NSPredicate? = nil, orderBy: String? = nil, orderAscending: Bool = false) -> Results<ViewModel> {
-        // Realm one day might have empty results so we can get rid of force unwrapping 
+        // Realm one day might have empty results so we can get rid of force unwrapping
         let realm = getRealm()!
         var result = realm.objects(self).filter(NSPredicate(format: "_deleted = false"))
         if query != nil {
