@@ -20,6 +20,7 @@ enum CommonError: LocalizedError {
     case syncLockError
     case microphonePermissionError
     case emptyField
+    case databaseError
 
     public var errorDescription: String? {
         switch self {
@@ -42,6 +43,8 @@ enum CommonError: LocalizedError {
             return NSLocalizedString("\(appName) needs the microphone to work. Go to the Settings app and select \(appName). Then turn on the Microphone.", comment: "")
         case .emptyField:
             return NSLocalizedString("Field is empty.", comment: "")
+        case .databaseError:
+            return NSLocalizedString("Realm has failed", comment: "")
         }
     }
 }

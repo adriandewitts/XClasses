@@ -28,6 +28,8 @@ class CollectionViewController: UIViewController, ListAdapterDataSource, ListWor
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        UICollectionView.appearance().isPrefetchingEnabled = false
+
         viewModel = FlowController.viewModel
 
         adapter.collectionView = collectionView
@@ -70,7 +72,14 @@ class CollectionViewController: UIViewController, ListAdapterDataSource, ListWor
     }
 
     func listAdapter(_ listAdapter: ListAdapter, sectionControllerWillEnterWorkingRange sectionController: ListSectionController) {
-        // TODO: Warm up images
+        if let sectionController = sectionController as? DefaultSectionController {
+            let viewModel = sectionController.viewModel
+            if let imagePath = viewModel.properties["image"], let imageURL = URL(string: imagePath) {
+                let preheater = Preheater(manager: Manager.shared)
+                let requests = [Request(url: imageURL)]
+                preheater.startPreheating(with: requests)
+            }
+        }
     }
 
     func listAdapter(_ listAdapter: ListAdapter, sectionControllerDidExitWorkingRange sectionController: ListSectionController) {
@@ -149,9 +158,9 @@ class CollectionViewCell: UICollectionViewCell, ViewModelManagerDelegate
     {
         self.viewModel = viewModel
         let properties = viewModel.properties
-        if let imagePath = properties["image"] {
+        if let imagePath = properties["image"], let imageURL = URL(string: imagePath) {
             imageView.contentMode = UIViewContentMode.scaleAspectFit
-            Manager.shared.loadImage(with: URL(string: imagePath)!, into: imageView)
+            Manager.shared.loadImage(with: imageURL, into: imageView)
         }
     }
 }

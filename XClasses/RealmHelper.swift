@@ -97,6 +97,14 @@ func delete<S: Sequence>(_ objects: S) where S.Iterator.Element: Object {
     }
 }
 
+func resolveRealm<T: Object>(_ reference: ThreadSafeReference<T>) -> T? {
+    guard let realm = getRealm() else {
+        return nil
+    }
+
+    return realm.resolve(reference)
+}
+
 class RealmString: Object {
     @objc dynamic var stringValue = ""
 

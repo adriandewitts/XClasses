@@ -147,6 +147,10 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return result
     }
 
+    class func find<T: ViewModel>(byClientId: String) -> T? {
+        return getRealm()?.objects(self).filter(NSPredicate(format: "clientId = %@", byClientId)).first as? T
+    }
+
     /// Prepares the model as a Dictionary, excluding prefixed underscored properties
     func exportProperties() -> [String: String] {
         var properties = [String: String]()
@@ -248,41 +252,80 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     }
 
     // TODO: Return promise, Add NSProgress
-    func putFile(key: String = "default", progress: @escaping (_ progress: Progress) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in})
-    {
-        let fileAttributes = type(of: self).fileAttributes[key]!
-        let localURL = Path(replaceOccurrence(of: fileAttributes.localURL)).url
-        let serverPath = replaceOccurrence(of: fileAttributes.serverPath)
+//    func putFile(key: String = "default", progress: @escaping (_ progress: Progress) -> Void = {_ in }, error: @escaping (_ error: Error) -> Void = {_ in }, completion: @escaping (_ url: URL) -> Void = {_ in})
+//    {
+//        let fileAttributes = type(of: self).fileAttributes[key]!
+//        let localURL = Path(replaceOccurrence(of: fileAttributes.localURL)).url
+//        let serverPath = replaceOccurrence(of: fileAttributes.serverPath)
+//
+//        let storage = Storage.storage(url: "gs://" + fileAttributes.bucket)
+//        let storageRef = storage.reference(forURL: "gs://" + fileAttributes.bucket + serverPath)
+//        let metadata = StorageMetadata()
+//        metadata.customMetadata = exportProperties()
+//
+//        let uploadTask = storageRef.putFile(from: localURL, metadata: metadata)
+//
+//        uploadTask.observe(.progress) { snapshot in
+//            progress(snapshot.progress!)
+//        }
+//
+//        uploadTask.observe(.success) { snapshot in
+//            completion(localURL)
+//
+//            if fileAttributes.deleteOnUpload
+//            {
+//                try! FileManager.default.removeItem(at: localURL)
+//            }
+//        }
+//
+//        // Errors shouldn't happen - so log it and try again in a minute
+//        uploadTask.observe(.failure) { snapshot in
+//            log(error: snapshot.error!.localizedDescription)
+//            Timer.scheduledTimer(withTimeInterval: ViewModel.tryAgain, repeats: false, block: { timer in
+//                self.putFile(key: key, progress: progress, completion: completion)
+//            })
+//            // TODO: will send back only errors that the user sees in a modal
+//            error(snapshot.error!)
+//        }
+//    }
 
-        let storage = Storage.storage(url: "gs://" + fileAttributes.bucket)
-        let storageRef = storage.reference(forURL: "gs://" + fileAttributes.bucket + serverPath)
-        let metadata = StorageMetadata()
-        metadata.customMetadata = exportProperties()
-
-        let uploadTask = storageRef.putFile(from: localURL, metadata: metadata)
-
-        uploadTask.observe(.progress) { snapshot in
-            progress(snapshot.progress!)
-        }
-
-        uploadTask.observe(.success) { snapshot in
-            completion(localURL)
-
-            if fileAttributes.deleteOnUpload
-            {
-                try! FileManager.default.removeItem(at: localURL)
+    // TODO: Add progress
+    func putFile(key: String = "default") -> Promise<URL> {
+        let selfRef = ThreadSafeReference(to: self)
+        return Promise<URL>(in: .background, { resolve, reject, _ in
+            guard let threadSafeSelf = resolveRealm(selfRef) else {
+                return
             }
-        }
 
-        // Errors shouldn't happen - so log it and try again in a minute
-        uploadTask.observe(.failure) { snapshot in
-            log(error: snapshot.error!.localizedDescription)
-            Timer.scheduledTimer(withTimeInterval: ViewModel.tryAgain, repeats: false, block: { timer in
-                self.putFile(key: key, progress: progress, completion: completion)
-            })
-            // TODO: will send back only errors that the user sees in a modal
-            error(snapshot.error!)
-        }
+            let fileAttributes = type(of: threadSafeSelf).fileAttributes[key]!
+            let localURL = Path(threadSafeSelf.replaceOccurrence(of: fileAttributes.localURL)).url
+            let serverPath = threadSafeSelf.replaceOccurrence(of: fileAttributes.serverPath)
+
+            let storage = Storage.storage(url: "gs://" + fileAttributes.bucket)
+            let storageRef = storage.reference(forURL: "gs://" + fileAttributes.bucket + serverPath)
+            let metadata = StorageMetadata()
+            metadata.customMetadata = threadSafeSelf.exportProperties()
+
+            let uploadTask = storageRef.putFile(from: localURL, metadata: metadata)
+
+            //        uploadTask.observe(.progress) { snapshot in
+            //        }
+
+            uploadTask.observe(.success) { snapshot in
+                resolve(localURL)
+
+                if fileAttributes.deleteOnUpload {
+                    try? FileManager.default.removeItem(at: localURL)
+                }
+            }
+
+            uploadTask.observe(.failure) { snapshot in
+                if let error = snapshot.error {
+                    log(error: error.localizedDescription)
+                    reject(error)
+                }
+            }
+        })
     }
 
     // Stream file. Return temp url with promise
