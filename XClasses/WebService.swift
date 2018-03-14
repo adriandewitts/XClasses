@@ -24,7 +24,7 @@ extension WebService: TargetType
     }
 
     var baseURL: URL {
-        return Configuration.baseURL
+        return SyncConfiguration.baseURL
     }
     //var baseURL: URL { return URL(string: "http://localhost:8080")! }
 

@@ -205,7 +205,12 @@ public class SyncController
                         switch result {
                         case let .success(moyaResponse):
                             guard moyaResponse.statusCode == 200 else {
-                                log(error: "Server returned status code \(moyaResponse.statusCode) while trying to read sync for \(model)")
+                                if moyaResponse.statusCode == 403 {
+                                    SyncConfiguration.forbidden()
+                                }
+                                else {
+                                    log(error: "Server returned status code \(moyaResponse.statusCode) while trying to read sync for \(model)")
+                                }
                                 reject(CommonError.permissionError)
                                 return
                             }
@@ -342,9 +347,13 @@ public class SyncController
                                     reject(CommonError.unexpectedError)
                                 }
                             }
+                            else if moyaResponse.statusCode == 403 {
+                                SyncConfiguration.forbidden()
+                                reject(CommonError.permissionError)
+                            }
                             else {
                                 log(error: "Server returned status code \(moyaResponse.statusCode) while trying to write sync for \(model).")
-                                print(try! moyaResponse.mapString())
+                                //print(try! moyaResponse.mapString())
                                 reject(CommonError.permissionError)
                             }
                         case let .failure(error):
@@ -401,6 +410,10 @@ public class SyncController
                                 if let syncRecords = getRealm()?.resolve(syncRecordsRef) {
                                     delete(syncRecords)
                                 }
+                            }
+                            else if moyaResponse.statusCode == 403 {
+                                SyncConfiguration.forbidden()
+                                reject(CommonError.permissionError)
                             }
                             else {
                                 log(error: "Either user was trying to delete records they can't or something went wrong with the server")
