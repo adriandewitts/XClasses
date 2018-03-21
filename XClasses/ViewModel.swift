@@ -233,10 +233,13 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 
     // File handling
 
-    func fileURL(forKey: String = "default") -> (URL, Bool)
+    func fileExists(forKey: String = "default") -> Bool {
+        return path().exists
+    }
+
+    func fileURL(forKey: String = "default") -> (URL)
     {
-        let path = self.path(forKey: forKey)
-        return (path.url, path.exists)
+        return path(forKey: forKey).url
     }
 
     func path(forKey: String = "default") -> Path
@@ -356,7 +359,8 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     // TODO: Add NSProgress to method
     func getFile(key: String = "default", redownload: Bool = false) -> Promise<URL> {
         let selfRef = ThreadSafeReference(to: self)
-        let (localURL, exists) = self.fileURL(forKey: key)
+        let localURL = fileURL(forKey: key)
+        let exists = fileExists(forKey: key)
         return Promise<URL>(in: .background, { resolve, reject, _ in
             if !exists || redownload {
                 let realm = try! Realm()
