@@ -82,6 +82,12 @@ class ViewController: UIViewController, ViewModelManagerDelegate {
     }
 }
 
+extension UIStoryboard {
+    class func controller(_ identifier: String, storyboard: String = "Main") -> UIViewController {
+        return UIStoryboard(name: storyboard, bundle: nil).instantiateViewController(withIdentifier: identifier)
+    }
+}
+
 class XSplitViewController: UISplitViewController, UISplitViewControllerDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()

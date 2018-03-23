@@ -15,14 +15,6 @@ class UIScrollImageViewController: ViewController, UIScrollViewDelegate {
 
     var emptyViewIsHidden = true
 
-    // TODO: Better wait defaults
-//    var waitAnimationFileName = "wait"
-//    var waitAnimationDuration = 2.0
-//    var waitView: UIImageView?
-//    var waitViewRect: CGRect {
-//        return CGRect(x: 0.0, y: 0.0, width: 50.0, height: 50.0)
-//    }
-
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -38,17 +30,17 @@ class UIScrollImageViewController: ViewController, UIScrollViewDelegate {
             navigationController?.setNavigationBarHidden(true, animated: true)
         }
 
-        let singleTap = UITapGestureRecognizer(target: self, action: #selector(toggleNavigation))
-        singleTap.numberOfTapsRequired = 1
-        singleTap.cancelsTouchesInView = false
-        scrollView.addGestureRecognizer(singleTap)
+//        let singleTap = UITapGestureRecognizer(target: self, action: #selector(toggleNavigation))
+//        singleTap.numberOfTapsRequired = 1
+//        singleTap.cancelsTouchesInView = false
+//        scrollView.addGestureRecognizer(singleTap)
 
         let doubleTap = UITapGestureRecognizer(target: self, action: #selector(zoomView))
         doubleTap.numberOfTapsRequired = 2
         doubleTap.cancelsTouchesInView = false
         scrollView.addGestureRecognizer(doubleTap)
 
-        singleTap.require(toFail: doubleTap)
+//        singleTap.require(toFail: doubleTap)
 
         showEmptyView()
         //resetZoom(at: scrollView.bounds.size)

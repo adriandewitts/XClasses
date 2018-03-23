@@ -151,6 +151,16 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return getRealm()?.objects(self).filter(NSPredicate(format: "clientId = %@", byClientId)).first as? T
     }
 
+    // TODO: Make this work
+//    class func findOrCreate<T: ViewModel>(value: [String: Any], field: String) -> T? {
+//        if let result = getRealm()?.objects(self).filter(NSPredicate(format: "%@ = %@", field, value[field] as! CVarArg)).first {
+//            return result as? T
+//        }
+//        let newObject = T(value: value)
+//        add(newObject)
+//        return newObject
+//    }
+
     /// Prepares the model as a Dictionary, excluding prefixed underscored properties
     func exportProperties() -> [String: String] {
         var properties = [String: String]()
