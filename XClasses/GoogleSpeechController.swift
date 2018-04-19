@@ -47,12 +47,12 @@ class GoogleSpeechController: NSObject {
             //self.speechRecognition.append(buffer)
         }
 
-        AudioKit.start()
+        try? AudioKit.start()
     }
 
     /// Stops audio input and speech recognition
     func stop() {
-        AudioKit.stop()
+        try? AudioKit.stop()
         microphone.avAudioNode.removeTap(onBus: 0)
         //speechRecognition.endAudio()
     }

@@ -17,10 +17,11 @@ import Hydra
 public class SyncModel: Object
 {
     @objc dynamic var modelName = ""
-    @objc dynamic var serverSync = Date.distantPast // Server timestamp of last server sync. To be used on next sync request
+    @objc dynamic var serverSync: Date? = nil // Server timestamp of last server sync. To be used on next sync request
     @objc dynamic var readLock = Date.distantPast
     @objc dynamic var writeLock = Date.distantPast
     @objc dynamic var deleteLock = Date.distantPast
+    @objc dynamic var internalVersion = 1.0
 
     class func named(_ model: String) -> SyncModel? {
         guard let realm = getRealm() else {
@@ -39,33 +40,30 @@ public class SyncController
     var uid = ""
 
     /// Configure sets up the meta data for each synced table
-    func configure(models: [AnyClass]) {
+    func configure(models: [ViewModel.Type]) {
         // Looking for a Realm Configuration in a separate Migrator class which is defined outside of the library
         var config = Migrator.configuration
         config.fileURL = (Path.userApplicationSupport + "default.realm").url
         config.shouldCompactOnLaunch = { totalBytes, usedBytes in
             // Compact if the file is over 100MB in size and less than 50% 'used'
             let oneHundredMB = 100 * 1024 * 1024
-            print("DB Size:")
-            print(totalBytes)
-            print(usedBytes)
+            print("DB Size total: \(totalBytes) used: \(usedBytes)")
             return (totalBytes > oneHundredMB) && (Double(usedBytes) / Double(totalBytes)) < 0.5
         }
         Realm.Configuration.defaultConfiguration = config
 
         // New Synmodel if it does not exist
         for model in models {
-            let model = "\(model)"
-            if SyncModel.named(model) == nil {
-                add(SyncModel(value: ["modelName": model]))
+            let name = "\(model)"
+            if SyncModel.named(name) == nil {
+                add(SyncModel(value: ["modelName": name, "internalVersion": model.internalVersion]))
             }
         }
     }
 
     /// Configure file will create needed folders to store synced files
-    func configureFile(models: [AnyClass]) {
-        for m in models {
-            let model = m as! ViewModel.Type
+    func configureFile(models: [ViewModel.Type]) {
+        for model in models {
             let paths = model.fileAttributes
             for p in paths {
                 let path = Path(p.value.localURL).parent
@@ -126,7 +124,8 @@ public class SyncController
                 }
 
                 // Is the sync fresh and there is record, then resolve
-                let interval = syncModel.serverSync.timeIntervalSince(Date())
+                let serverSync = syncModel.serverSync ?? Date.distantPast
+                let interval = serverSync.timeIntervalSince(Date())
                 if interval < freshness && !model.empty {
                     resolve(Void())
                 }
@@ -134,16 +133,16 @@ public class SyncController
                 // If not retry
                 self.retrySync(model: model).timeout(in: .userInitiated, timeout: timeout, error: CommonError.timeoutError).then() { _ in
                     resolve(Void())
-                    }.catch() { error in
-                        reject(error)
+                }.catch() { error in
+                    reject(error)
                 }
             }
         }
     }
 
     /// Read sync will get token, and retry the sync
-    func retrySync(model: ViewModel.Type) -> Promise<Void>
-    {
+    //TODO: Retry if there is no new data
+    func retrySync(model: ViewModel.Type) -> Promise<Void> {
         return Promise<Void> { resolve, reject, _ in
             self.token().then() { token in
                 self.readSync(model: model, token: token, forceRequest: true, qos: .userInitiated).retry(SyncController.retries) {_,_ in sleep(SyncController.retrySleep); return true }.then { _ in

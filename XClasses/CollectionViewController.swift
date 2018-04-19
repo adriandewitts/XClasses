@@ -35,6 +35,10 @@ class CollectionViewController: UIViewController, ListAdapterDataSource, ListWor
         adapter.collectionView = collectionView
         adapter.dataSource = self as ListAdapterDataSource
 
+        loadViewModelCollection()
+    }
+
+    func loadViewModelCollection() {
         if let relatedRealmCollection = viewModel.relatedCollection as? Results<ViewModel> {
             notificationToken = relatedRealmCollection.observe { changes in
                 switch changes {

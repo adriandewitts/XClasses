@@ -36,14 +36,14 @@ struct FileModel {
     let fileUpdatedField: String?
 }
 
-// TODO: Record cleanup - periodically - when a certain age
+// TODO: Record cleanup - periodically - on fresh start
 // TODO: File cleanup after certain age
 
 public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     static let tryAgain = 60.0
 
     @objc dynamic var _sync = SyncStatus.created.rawValue // Record status for syncing
-    @objc dynamic var id = 0 // Server ID - do not make primary key, as it is unchangeable
+    @objc dynamic var id = 0 // Server ID - do not make primary key, as they are unchangeable
     @objc dynamic var clientId = UUID().uuidString // Used to make sure records aren't saved to the server DB multiple times
     @objc dynamic var _deleted = false
 
@@ -71,6 +71,10 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 
     class var tableView: String {
         return "default"
+    }
+
+    class var internalVersion: Float {
+        return 1.0
     }
 
     // Can read from service
@@ -147,19 +151,74 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return result
     }
 
-    class func find<T: ViewModel>(byClientId: String) -> T? {
-        return getRealm()?.objects(self).filter(NSPredicate(format: "clientId = %@", byClientId)).first as? T
+    class func find(id: Int?, clientId: String?) -> Self? {
+        if let id = id, id > 0, let result = getRealm()?.objects(self).filter(NSPredicate(format: "id = %@", id)).first {
+            return result
+        }
+
+        return getRealm()?.objects(self).filter(NSPredicate(format: "clientId = %@", clientId ?? "")).first
     }
 
-    // TODO: Make this work
-//    class func findOrCreate<T: ViewModel>(value: [String: Any], field: String) -> T? {
-//        if let result = getRealm()?.objects(self).filter(NSPredicate(format: "%@ = %@", field, value[field] as! CVarArg)).first {
-//            return result as? T
-//        }
-//        let newObject = T(value: value)
-//        add(newObject)
-//        return newObject
-//    }
+    func setAsUserDefault(forKey key: String) {
+        if id > 0 {
+            UserDefaults.standard.set(id, forKey: key + "Id")
+        }
+
+        UserDefaults.standard.set(clientId, forKey: key + "ClientId")
+    }
+
+    class func find(byUserDefaults key: String) -> Self? {
+        return find(id: UserDefaults.standard.integer(forKey: key + "Id"), clientId: UserDefaults.standard.string(forKey: key + "ClientId"))
+    }
+
+    func join<T: ViewModel>(model: T.Type, create: Bool = false) -> T? {
+        let name = String(describing: type(of: self))
+        let idName = name + "Id"
+
+        if id > 0, let result = getRealm()?.objects(T.self).filter(NSPredicate(format: "%@ = %@", idName, id)).first {
+            return result
+        }
+
+        let clientIdName = name + "ClientId"
+        if let result = getRealm()?.objects(T.self).filter(NSPredicate(format: "%@ = %@", clientIdName, clientId)).first {
+            return result
+        }
+
+        if create {
+            let object = T()
+            object[idName] = id
+            object[clientIdName] = clientId
+            add(object)
+            return object
+        }
+
+        return nil
+    }
+
+    func join<T: ViewModel>(model: T.Type) -> Results<T> {
+        let name = String(describing: type(of: self))
+        let idName = name + "Id"
+        let clientIdName = name + "ClientId"
+        var predicate: NSPredicate
+
+        if id > 0 {
+            predicate = NSPredicate(format: "%@ = %@ OR %@ = %@", idName, id, clientIdName, clientId)
+        }
+        else {
+            predicate = NSPredicate(format: "%@ = %@", clientIdName, clientId)
+        }
+
+        return getRealm()!.objects(T.self).filter(predicate)
+    }
+
+    class func findOrCreate(values: [String: Any], name: String) -> Self {
+        if let result = getRealm()?.objects(self).filter(NSPredicate(format: "%@ = %@", name, values[name] as! CVarArg)).first {
+            return result
+        }
+        let newObject = self.init(value: values)
+        add(newObject)
+        return newObject
+    }
 
     /// Prepares the model as a Dictionary, excluding prefixed underscored properties
     func exportProperties() -> [String: String] {
@@ -192,8 +251,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     }
 
     /// Imports the data from a dictionary and does the type casting that it needs to do.
-    func importProperties(dictionary: [String: String], isNew: Bool)
-    {
+    func importProperties(dictionary: [String: String], isNew: Bool){
         let schemaProperties = objectSchema.properties
         for property in schemaProperties {
             if !property.name.hasPrefix("_") && dictionary[property.name] != nil {
