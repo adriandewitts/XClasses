@@ -24,7 +24,7 @@ public class SyncModel: Object
     @objc dynamic var internalVersion = 1.0
 
     class func named(_ model: String) -> SyncModel? {
-        guard let realm = getRealm() else {
+        guard let realm = Database.realm else {
             return nil
         }
         return realm.objects(SyncModel.self).filter(NSPredicate(format: "modelName = '\(model)'")).first
@@ -56,7 +56,7 @@ public class SyncController
         for model in models {
             let name = "\(model)"
             if SyncModel.named(name) == nil {
-                add(SyncModel(value: ["modelName": name, "internalVersion": model.internalVersion]))
+                Database.add(SyncModel(value: ["modelName": name, "internalVersion": model.internalVersion]))
             }
         }
     }
@@ -182,7 +182,7 @@ public class SyncController
                 }
 
                 // Make sync locked
-                update {
+                Database.update {
                     syncModel.readLock = Date()
                 }
                 var timestamp = Date.distantPast
@@ -194,7 +194,7 @@ public class SyncController
                     autoreleasepool {
                         defer {
                             if let syncModel = SyncModel.named(model) {
-                                update {
+                                Database.update {
                                     syncModel.readLock = Date.distantPast
                                     syncModel.serverSync = timestamp
                                 }
@@ -235,8 +235,8 @@ public class SyncController
                                         dict[property] = components[index]
                                     }
 
-                                    if let record = modelClass.find(NSPredicate(format: "id = \(id)")).first {
-                                        update {
+                                    if let record = Database.find(modelClass.self, query: NSPredicate(format: "id = \(id)")).first {
+                                        Database.update {
                                             if (dict["delete"] == nil) || (dict["delete"] != "true") {
                                                 record.importProperties(dictionary: dict, isNew:false)
                                             }
@@ -251,7 +251,7 @@ public class SyncController
                                         newRecords.append(record)
                                     }
                                 }
-                                add(newRecords)
+                                Database.add(newRecords)
                             }
                             catch {
                                 log(error: "Response was impossibly incorrect")
@@ -283,7 +283,7 @@ public class SyncController
 
                 // Make sure there are records to save
                 var predicate = NSPredicate(format: "_sync = \(SyncStatus.created.rawValue) OR _sync = \(SyncStatus.updated.rawValue)")
-                let syncRecords = modelClass.find(predicate)
+                let syncRecords = Database.find(modelClass.self, query: predicate)
                 guard syncRecords.count > 0 else {
                     return
                 }
@@ -295,7 +295,7 @@ public class SyncController
                     return
                 }
 
-                update {
+                Database.update {
                     syncModel.writeLock = Date()
                 }
 
@@ -317,7 +317,7 @@ public class SyncController
                     autoreleasepool {
                         defer {
                             if let syncModel = SyncModel.named(model) {
-                                update {
+                                Database.update {
                                     syncModel.writeLock = Date.distantPast
                                 }
                             }
@@ -334,8 +334,8 @@ public class SyncController
                                         let id = Int(components[0])!
                                         let cid = components[1]
                                         predicate = NSPredicate(format: "id = \(id) OR clientId = '\(cid)'")
-                                        let item = modelClass.find(predicate).first!
-                                        update {
+                                        let item = Database.find(modelClass.self, query: predicate).first!
+                                        Database.update {
                                             item.id = id
                                             item._sync = SyncStatus.current.rawValue
                                         }
@@ -375,7 +375,7 @@ public class SyncController
                 let model = "\(model)"
 
                 // Make sure there are records to delete
-                let syncRecords = modelClass.find(NSPredicate(format: "_sync = \(SyncStatus.deleted.rawValue)"))
+                let syncRecords = Database.find(modelClass.self, query: NSPredicate(format: "_sync = \(SyncStatus.deleted.rawValue)"))
                 guard syncRecords.count > 0 else {
                     return
                 }
@@ -394,7 +394,7 @@ public class SyncController
                 }
 
                 //var timestamp = Date.distantPast
-                update {
+                Database.update {
                     syncModel.deleteLock = Date()
                 }
 
@@ -406,8 +406,8 @@ public class SyncController
                         case let .success(moyaResponse):
                             if moyaResponse.statusCode == 200 {
                                 // As long as the status code is a success, we will delete these objects
-                                if let syncRecords = getRealm()?.resolve(syncRecordsRef) {
-                                    delete(syncRecords)
+                                if let syncRecords = Database.realm?.resolve(syncRecordsRef) {
+                                    Database.delete(syncRecords)
                                 }
                             }
                             else if moyaResponse.statusCode == 403 {
@@ -424,7 +424,7 @@ public class SyncController
                         }
 
                         if let syncModel = SyncModel.named(model) {
-                            update {
+                            Database.update {
                                 syncModel.deleteLock = Date.distantPast
                             }
                         }

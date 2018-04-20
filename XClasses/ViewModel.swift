@@ -140,11 +140,11 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     }
 
     class func findOrCreate(values: [String: Any], name: String) -> Self {
-        if let result = getRealm()?.objects(self).filter(NSPredicate(format: "%@ = %@", name, values[name] as! CVarArg)).first {
+        if let result = Database.realm?.objects(self).filter(NSPredicate(format: "%@ = %@", name, values[name] as! CVarArg)).first {
             return result
         }
         let newObject = self.init(value: values)
-        add(newObject)
+        Database.add(newObject)
         return newObject
     }
 
@@ -158,21 +158,21 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 
     class func userDefault(key: String) -> Self? {
         let id = UserDefaults.standard.integer(forKey: key + "Id")
-        if id > 0, let result = getRealm()?.objects(self).filter(NSPredicate(format: "id = %@", id)).first {
+        if id > 0, let result = Database.realm?.objects(self).filter(NSPredicate(format: "id = %@", id)).first {
             return result
         }
 
         let clientId = UserDefaults.standard.string(forKey: key + "ClientId")
-        return getRealm()?.objects(self).filter(NSPredicate(format: "clientId = %@", clientId ?? "")).first
+        return Database.realm?.objects(self).filter(NSPredicate(format: "clientId = %@", clientId ?? "")).first
     }
 
 
     //    class func find(id: Int?, clientId: String?) -> Self? {
-    //        if let id = id, id > 0, let result = getRealm()?.objects(self).filter(NSPredicate(format: "id = %@", id)).first {
+    //        if let id = id, id > 0, let result = Database.realm?.objects(self).filter(NSPredicate(format: "id = %@", id)).first {
     //            return result
     //        }
     //
-    //        return getRealm()?.objects(self).filter(NSPredicate(format: "clientId = %@", clientId ?? "")).first
+    //        return Database.realm?.objects(self).filter(NSPredicate(format: "clientId = %@", clientId ?? "")).first
     //    }
 
 //    func related<T: ViewModel>(model: T.Type, create: Bool = false) -> T? {
@@ -180,12 +180,12 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 //        let name = String(describing: type(of: self))
 //        let idName = name + "Id"
 //
-//        if id > 0, let result = getRealm()?.objects(T.self).filter(NSPredicate(format: "%@ = %@", idName, id)).first {
+//        if id > 0, let result = Database.realm?.objects(T.self).filter(NSPredicate(format: "%@ = %@", idName, id)).first {
 //            return result
 //        }
 //
 //        let clientIdName = name + "ClientId"
-//        if let result = getRealm()?.objects(T.self).filter(NSPredicate(format: "%@ = %@", clientIdName, clientId)).first {
+//        if let result = Database.realm?.objects(T.self).filter(NSPredicate(format: "%@ = %@", clientIdName, clientId)).first {
 //            return result
 //        }
 //
@@ -213,7 +213,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 //            predicate = NSPredicate(format: "%@ = %@", clientIdName, clientId)
 //        }
 //
-//        return getRealm()!.objects(T.self).filter(predicate)
+//        return Database.realm!.objects(T.self).filter(predicate)
 //    }
 
     /// Prepares the model as a Dictionary, excluding prefixed underscored properties
@@ -360,7 +360,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     func putFile(key: String = "default") -> Promise<URL> {
         let selfRef = ThreadSafeReference(to: self)
         return Promise<URL>(in: .background, { resolve, reject, _ in
-            guard let threadSafeSelf = resolveRealm(selfRef) else {
+            guard let threadSafeSelf = Database.realm?.resolve(selfRef) else {
                 return
             }
 
