@@ -128,87 +128,15 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 
     // End of overrides
 
+    /// Count all objects in the table
     class var count: Int {
         let realm = try! Realm()
         return realm.objects(self).count
     }
 
+    /// Check if the table is empty
     class var empty: Bool {
         return self.count == 0
-    }
-
-    // Return results of query
-    class func find(_ query: NSPredicate? = nil, orderBy: String? = nil, orderAscending: Bool = false) -> Results<ViewModel> {
-        // Realm one day might have empty results so we can get rid of force unwrapping
-        let realm = getRealm()!
-        var result = realm.objects(self).filter(NSPredicate(format: "_deleted = false"))
-        if query != nil {
-            result = result.filter(query!)
-        }
-        if orderBy != nil {
-            result = result.sorted(byKeyPath: orderBy!, ascending: orderAscending)
-        }
-        return result
-    }
-
-    class func find(id: Int?, clientId: String?) -> Self? {
-        if let id = id, id > 0, let result = getRealm()?.objects(self).filter(NSPredicate(format: "id = %@", id)).first {
-            return result
-        }
-
-        return getRealm()?.objects(self).filter(NSPredicate(format: "clientId = %@", clientId ?? "")).first
-    }
-
-    func setAsUserDefault(forKey key: String) {
-        if id > 0 {
-            UserDefaults.standard.set(id, forKey: key + "Id")
-        }
-
-        UserDefaults.standard.set(clientId, forKey: key + "ClientId")
-    }
-
-    class func find(byUserDefaults key: String) -> Self? {
-        return find(id: UserDefaults.standard.integer(forKey: key + "Id"), clientId: UserDefaults.standard.string(forKey: key + "ClientId"))
-    }
-
-    func join<T: ViewModel>(model: T.Type, create: Bool = false) -> T? {
-        let name = String(describing: type(of: self))
-        let idName = name + "Id"
-
-        if id > 0, let result = getRealm()?.objects(T.self).filter(NSPredicate(format: "%@ = %@", idName, id)).first {
-            return result
-        }
-
-        let clientIdName = name + "ClientId"
-        if let result = getRealm()?.objects(T.self).filter(NSPredicate(format: "%@ = %@", clientIdName, clientId)).first {
-            return result
-        }
-
-        if create {
-            let object = T()
-            object[idName] = id
-            object[clientIdName] = clientId
-            add(object)
-            return object
-        }
-
-        return nil
-    }
-
-    func join<T: ViewModel>(model: T.Type) -> Results<T> {
-        let name = String(describing: type(of: self))
-        let idName = name + "Id"
-        let clientIdName = name + "ClientId"
-        var predicate: NSPredicate
-
-        if id > 0 {
-            predicate = NSPredicate(format: "%@ = %@ OR %@ = %@", idName, id, clientIdName, clientId)
-        }
-        else {
-            predicate = NSPredicate(format: "%@ = %@", clientIdName, clientId)
-        }
-
-        return getRealm()!.objects(T.self).filter(predicate)
     }
 
     class func findOrCreate(values: [String: Any], name: String) -> Self {
@@ -219,6 +147,74 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         add(newObject)
         return newObject
     }
+
+    func setAsUserDefault(forKey key: String) {
+        if id > 0 {
+            UserDefaults.standard.set(id, forKey: key + "Id")
+        }
+
+        UserDefaults.standard.set(clientId, forKey: key + "ClientId")
+    }
+
+    class func userDefault(key: String) -> Self? {
+        let id = UserDefaults.standard.integer(forKey: key + "Id")
+        if id > 0, let result = getRealm()?.objects(self).filter(NSPredicate(format: "id = %@", id)).first {
+            return result
+        }
+
+        let clientId = UserDefaults.standard.string(forKey: key + "ClientId")
+        return getRealm()?.objects(self).filter(NSPredicate(format: "clientId = %@", clientId ?? "")).first
+    }
+
+
+    //    class func find(id: Int?, clientId: String?) -> Self? {
+    //        if let id = id, id > 0, let result = getRealm()?.objects(self).filter(NSPredicate(format: "id = %@", id)).first {
+    //            return result
+    //        }
+    //
+    //        return getRealm()?.objects(self).filter(NSPredicate(format: "clientId = %@", clientId ?? "")).first
+    //    }
+
+//    func related<T: ViewModel>(model: T.Type, create: Bool = false) -> T? {
+//        // TODO: Check for foreign key in self or other model
+//        let name = String(describing: type(of: self))
+//        let idName = name + "Id"
+//
+//        if id > 0, let result = getRealm()?.objects(T.self).filter(NSPredicate(format: "%@ = %@", idName, id)).first {
+//            return result
+//        }
+//
+//        let clientIdName = name + "ClientId"
+//        if let result = getRealm()?.objects(T.self).filter(NSPredicate(format: "%@ = %@", clientIdName, clientId)).first {
+//            return result
+//        }
+//
+//        if create {
+//            let object = T()
+//            object[idName] = id
+//            object[clientIdName] = clientId
+//            add(object)
+//            return object
+//        }
+//
+//        return nil
+//    }
+//
+//    func related<T: ViewModel>(model: T.Type) -> Results<T> {
+//        let name = String(describing: type(of: self))
+//        let idName = name + "Id"
+//        let clientIdName = name + "ClientId"
+//        var predicate: NSPredicate
+//
+//        if id > 0 {
+//            predicate = NSPredicate(format: "%@ = %@ OR %@ = %@", idName, id, clientIdName, clientId)
+//        }
+//        else {
+//            predicate = NSPredicate(format: "%@ = %@", clientIdName, clientId)
+//        }
+//
+//        return getRealm()!.objects(T.self).filter(predicate)
+//    }
 
     /// Prepares the model as a Dictionary, excluding prefixed underscored properties
     func exportProperties() -> [String: String] {

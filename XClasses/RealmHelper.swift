@@ -22,6 +22,20 @@ func getRealm() -> Realm? {
     return nil
 }
 
+/// Return results of query
+func find<T: ViewModel>(_ model: T.Type, query: NSPredicate? = nil, orderBy: String? = nil, orderAscending: Bool = false) -> Results<T> {
+    // Realm one day might allow constructed empty results so we can get rid of force unwrapping
+    let realm = getRealm()!
+    var result = realm.objects(T.self).filter(NSPredicate(format: "_deleted = false"))
+    if query != nil {
+        result = result.filter(query!)
+    }
+    if orderBy != nil {
+        result = result.sorted(byKeyPath: orderBy!, ascending: orderAscending)
+    }
+    return result
+}
+
 func add(_ object: Object) {
     guard let realm = getRealm() else {
         return
