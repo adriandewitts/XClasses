@@ -139,6 +139,18 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return self.count == 0
     }
 
+    /// Return results of query
+    class func find(_ query: NSPredicate? = nil, orderBy: String? = nil, orderAscending: Bool = false) -> Results<ViewModel> {
+        var results = Database.realm!.objects(self).filter(NSPredicate(format: "_deleted = false"))
+        if query != nil {
+            results = results.filter(query!)
+        }
+        if orderBy != nil {
+            results = results.sorted(byKeyPath: orderBy!, ascending: orderAscending)
+        }
+        return results
+    }
+
     class func findOrCreate(values: [String: Any], name: String) -> Self {
         if let result = Database.realm?.objects(self).filter(NSPredicate(format: "%@ = %@", name, values[name] as! CVarArg)).first {
             return result
@@ -146,6 +158,10 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         let newObject = self.init(value: values)
         Database.add(newObject)
         return newObject
+    }
+
+    class func object(_ tuple: (String, Any?)) -> Self? {
+        return Database.realm!.objects(self).filter(NSPredicate(format: "_deleted = false && %@ = %@", tuple.0, tuple.1 as! CVarArg)).first
     }
 
     func setAsUserDefault(forKey key: String) {
