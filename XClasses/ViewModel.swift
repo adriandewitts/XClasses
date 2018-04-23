@@ -130,8 +130,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 
     /// Count all objects in the table
     class var count: Int {
-        let realm = try! Realm()
-        return realm.objects(self).count
+        return objects().count
     }
 
     /// Check if the table is empty
@@ -139,20 +138,8 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return self.count == 0
     }
 
-    /// Return results of query
-    class func find(_ query: NSPredicate? = nil, orderBy: String? = nil, orderAscending: Bool = false) -> Results<ViewModel> {
-        var results = Database.realm!.objects(self).filter(NSPredicate(format: "_deleted = false"))
-        if query != nil {
-            results = results.filter(query!)
-        }
-        if orderBy != nil {
-            results = results.sorted(byKeyPath: orderBy!, ascending: orderAscending)
-        }
-        return results
-    }
-
     class func findOrCreate(values: [String: Any], name: String) -> Self {
-        if let result = Database.realm?.objects(self).filter(NSPredicate(format: "%@ = %@", name, values[name] as! CVarArg)).first {
+        if let result = Database.realm?.objects(self).filter("%@ = %@", name, values[name] as! CVarArg).first {
             return result
         }
         let newObject = self.init(value: values)
@@ -160,9 +147,15 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return newObject
     }
 
-    class func object(_ tuple: (String, Any?)) -> Self? {
-        return Database.realm!.objects(self).filter(NSPredicate(format: "_deleted = false && %@ = %@", tuple.0, tuple.1 as! CVarArg)).first
+    class func objects() -> Results<ViewModel> {
+        return Database.realm!.objects(self).filter("_deleted = false")
     }
+
+//    class func object(forKey: String, value: String) -> Self? {
+//        let table = Database.realm?.objects(self)
+//        let filter = table?.filter("_deleted = false && \(forKey) = %@", value as! CVarArg)
+//        return filter?.first
+//    }
 
     func setAsUserDefault(forKey key: String) {
         if id > 0 {
@@ -174,63 +167,13 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 
     class func userDefault(key: String) -> Self? {
         let id = UserDefaults.standard.integer(forKey: key + "Id")
-        if id > 0, let result = Database.realm?.objects(self).filter(NSPredicate(format: "id = %@", id)).first {
+        if id > 0, let result = Database.objects(self).filter(NSPredicate(format: "id = %@", id)).first {
             return result
         }
 
         let clientId = UserDefaults.standard.string(forKey: key + "ClientId")
-        return Database.realm?.objects(self).filter(NSPredicate(format: "clientId = %@", clientId ?? "")).first
+        return Database.objects(self).filter(NSPredicate(format: "clientId = %@", clientId ?? "")).first
     }
-
-
-    //    class func find(id: Int?, clientId: String?) -> Self? {
-    //        if let id = id, id > 0, let result = Database.realm?.objects(self).filter(NSPredicate(format: "id = %@", id)).first {
-    //            return result
-    //        }
-    //
-    //        return Database.realm?.objects(self).filter(NSPredicate(format: "clientId = %@", clientId ?? "")).first
-    //    }
-
-//    func related<T: ViewModel>(model: T.Type, create: Bool = false) -> T? {
-//        // TODO: Check for foreign key in self or other model
-//        let name = String(describing: type(of: self))
-//        let idName = name + "Id"
-//
-//        if id > 0, let result = Database.realm?.objects(T.self).filter(NSPredicate(format: "%@ = %@", idName, id)).first {
-//            return result
-//        }
-//
-//        let clientIdName = name + "ClientId"
-//        if let result = Database.realm?.objects(T.self).filter(NSPredicate(format: "%@ = %@", clientIdName, clientId)).first {
-//            return result
-//        }
-//
-//        if create {
-//            let object = T()
-//            object[idName] = id
-//            object[clientIdName] = clientId
-//            add(object)
-//            return object
-//        }
-//
-//        return nil
-//    }
-//
-//    func related<T: ViewModel>(model: T.Type) -> Results<T> {
-//        let name = String(describing: type(of: self))
-//        let idName = name + "Id"
-//        let clientIdName = name + "ClientId"
-//        var predicate: NSPredicate
-//
-//        if id > 0 {
-//            predicate = NSPredicate(format: "%@ = %@ OR %@ = %@", idName, id, clientIdName, clientId)
-//        }
-//        else {
-//            predicate = NSPredicate(format: "%@ = %@", clientIdName, clientId)
-//        }
-//
-//        return Database.realm!.objects(T.self).filter(predicate)
-//    }
 
     /// Prepares the model as a Dictionary, excluding prefixed underscored properties
     func exportProperties() -> [String: String] {
@@ -294,16 +237,16 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
                     if let date = Date.from(UTCString: dictionary[property.name]!) {
                         self[property.name] = date
                     }
-                case .linkingObjects:
+                case .object:
                     if property.objectClassName == "RealmString" {
                         let array = dictionary[property.name]!.components(separatedBy: ",")
                         let list = self[property.name] as! List<RealmString>
                         for element in array {
-                            list.append(RealmString(stringValue: element))
+                            list.append(RealmString.findOrCreate(element))
                         }
                     }
                 default:
-                    log(error: "Property type does not exist")
+                    log(error: "\(property.name): \(property.type) \(String(describing: property.objectClassName)) property type does not exist")
                 }
             }
 
@@ -480,6 +423,6 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
             replacement = replacement.replacingOccurrences(of: "{\(property.name)}", with: String(describing: self[property.name]!))
         }
 
-        return replacement.replacingOccurrences(of: "{uid}", with: SyncController.sharedInstance.uid)
+        return replacement.replacingOccurrences(of: "{uid}", with: SyncController.shared.uid)
     }
 }

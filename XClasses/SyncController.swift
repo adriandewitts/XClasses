@@ -23,17 +23,14 @@ public class SyncModel: Object
     @objc dynamic var deleteLock = Date.distantPast
     @objc dynamic var internalVersion = 1.0
 
-    class func named(_ model: String) -> SyncModel? {
-        guard let realm = Database.realm else {
-            return nil
-        }
-        return realm.objects(SyncModel.self).filter(NSPredicate(format: "modelName = '\(model)'")).first
+    class func named(_ modelName: String) -> SyncModel? {
+        return Database.realm?.objects(SyncModel.self).filter("modelName = %@", modelName).first
     }
 }
 
 public class SyncController
 {
-    static let sharedInstance = SyncController()
+    static let shared = SyncController()
     static let serverTimeout = 60.0
     static let retries = 60
     static let retrySleep: UInt32 = 1
@@ -52,9 +49,9 @@ public class SyncController
         }
         Realm.Configuration.defaultConfiguration = config
 
-        // New Synmodel if it does not exist
+        // New Syncmodel if it does not exist
         for model in models {
-            let name = "\(model)"
+            let name = String(describing: model)
             if SyncModel.named(name) == nil {
                 Database.add(SyncModel(value: ["modelName": name, "internalVersion": model.internalVersion]))
             }
@@ -103,80 +100,72 @@ public class SyncController
             for model in models {
                 self.writeSync(model: model, token: token).then(in: .utility) {}
                 self.deleteSync(model: model, token: token).then(in: .utility) {}
-                self.readSync(model: model, token: token).then(in: .utility) {}
+                self.readSync(model: model, token: token).then(in: .utility) { _ in }
             }
         }.catch() { error in
             for model in models {
-                self.readSync(model: model, token: nil).then(in: .utility) {}
+                self.readSync(model: model, token: nil).then(in: .utility) { _ in}
                 // Never has write sync because write needs to be authenticated
             }
         }
     }
 
-    /// Instead of responding with a Promise of results, instead return the sync is ready. The reason for this is that it is more code to move the Realm response over the thread. Will also force the request and ignore the sync lock.
-    func syncReady(model: ViewModel.Type, freshness: Double = 600.0, timeout: Double = 60.0) -> Promise<Void> {
-        return Promise<Void> { resolve, reject, _ in
+    /// Instead of responding with a Promise of results, instead return the sync has changed the results in the table. The reason for this is that it is more code to move the Realm response over the thread. Agressive mode will retry if there are no new records, force the request and ignore the sync lock.
+    func sync(model: ViewModel.Type, freshness: Double = 600.0, timeout: Double = 60.0) -> Promise<Bool> {
+        return Promise<Bool> { resolve, reject, _ in
             autoreleasepool {
-                // Get Sync Model (must be configured and ready)
-                guard let syncModel = SyncModel.named("\(model)") else {
+                // Sync Model must be configured and ready
+                guard let syncModel = SyncModel.named(String(describing: model)) else {
                     reject(CommonError.unexpectedError)
                     return
                 }
 
-                // Is the sync fresh and there is record, then resolve
+                // Is the sync fresh and there is records, then resolve
                 let serverSync = syncModel.serverSync ?? Date.distantPast
                 let interval = serverSync.timeIntervalSince(Date())
                 if interval < freshness && !model.empty {
-                    resolve(Void())
+                    resolve(false)
                 }
 
-                // If not retry
-                self.retrySync(model: model).timeout(in: .userInitiated, timeout: timeout, error: CommonError.timeoutError).then() { _ in
-                    resolve(Void())
-                }.catch() { error in
-                    reject(error)
-                }
-            }
-        }
-    }
-
-    /// Read sync will get token, and retry the sync
-    //TODO: Retry if there is no new data
-    func retrySync(model: ViewModel.Type) -> Promise<Void> {
-        return Promise<Void> { resolve, reject, _ in
-            self.token().then() { token in
-                self.readSync(model: model, token: token, forceRequest: true, qos: .userInitiated).retry(SyncController.retries) {_,_ in sleep(SyncController.retrySleep); return true }.then { _ in
-                    resolve(Void())
-                }.catch { error in
-                    reject(error)
-                }
-            }.catch() { _ in
-                self.readSync(model: model, token: nil, forceRequest: true, qos: .userInitiated).retry(SyncController.retries) {_,_ in sleep(SyncController.retrySleep); return true }.then { _ in
-                    resolve(Void())
-                }.catch { error in
-                    reject(error)
+                self.token().then() { token in
+                    self.readSync(model: model, token: token, qos: .userInitiated).retry(SyncController.retries) { _,_ in
+                        sleep(SyncController.retrySleep)
+                        return true
+                    }.then { newRecords in
+                        resolve(newRecords)
+                    }.catch { error in
+                        reject(error)
+                    }
+                }.catch() { _ in
+                    self.readSync(model: model, token: nil, qos: .userInitiated).retry(SyncController.retries) { _,_ in
+                        sleep(SyncController.retrySleep)
+                        return true
+                    }.then { newRecords in
+                        resolve(newRecords)
+                    }.catch { error in
+                        reject(error)
+                    }
                 }
             }
         }
     }
 
     /// Read sync make a request to the web service and stores new record to the local DB. Will also mark records for deletion
-    func readSync(model: ViewModel.Type, token: String? = nil, forceRequest: Bool = false, qos: DispatchQoS.QoSClass = .utility) -> Promise<Void> {
-        return Promise<Void> { resolve, reject, _ in
+    func readSync(model: ViewModel.Type, token: String? = nil, qos: DispatchQoS.QoSClass = .utility) -> Promise<Bool> {
+        return Promise<Bool> { resolve, reject, _ in
             autoreleasepool {
-                let modelClass = model
-                let model = "\(model)"
+                let modelName = String(describing: model)
 
                 // Make sure model has permission
-                let authenticated = (modelClass.authenticate == true && token != nil) || modelClass.authenticate == false
-                guard authenticated, modelClass.read == true else {
+                let authenticated = (model.authenticate == true && token != nil) || model.authenticate == false
+                guard authenticated, model.read == true else {
                     reject(CommonError.permissionError)
                     return
                 }
 
                 // Get syncModel
                 let minuteAgo = Date(timeIntervalSinceNow: -SyncController.serverTimeout)
-                guard let syncModel = SyncModel.named(model), syncModel.readLock < minuteAgo else {
+                guard let syncModel = SyncModel.named(modelName), syncModel.readLock < minuteAgo else {
                     reject(CommonError.syncLockError)
                     return
                 }
@@ -185,19 +174,21 @@ public class SyncController
                 Database.update {
                     syncModel.readLock = Date()
                 }
-                var timestamp = Date.distantPast
+                var syncTimestamp: Date? = syncModel.serverSync
+                print("Locked: \(modelName)")
 
                 // Make request with Moya
-                let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos))//, plugins: [NetworkLoggerPlugin(verbose: true)])
-                provider.request(.read(version: modelClass.tableVersion, table: modelClass.table, view: modelClass.tableView, accessToken: token, lastTimestamp: syncModel.serverSync, predicate: nil)) { result in
+                let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos), plugins: [NetworkLoggerPlugin(verbose: true)])
+                provider.request(.read(version: model.tableVersion, table: model.table, view: model.tableView, accessToken: token, lastTimestamp: syncModel.serverSync, predicate: nil)) { result in
                     // Put autoreleasepool around everything to get all realms
                     autoreleasepool {
                         defer {
-                            if let syncModel = SyncModel.named(model) {
+                            if let syncModel = SyncModel.named(modelName) {
                                 Database.update {
                                     syncModel.readLock = Date.distantPast
-                                    syncModel.serverSync = timestamp
+                                    syncModel.serverSync = syncTimestamp
                                 }
+                                print("Unlocked: \(modelName)")
                             }
                         }
 
@@ -208,7 +199,7 @@ public class SyncController
                                     SyncConfiguration.forbidden()
                                 }
                                 else {
-                                    log(error: "Server returned status code \(moyaResponse.statusCode) while trying to read sync for \(model)")
+                                    log(error: "Server returned status code \(moyaResponse.statusCode) while trying to read sync for \(modelName)")
                                 }
                                 reject(CommonError.permissionError)
                                 return
@@ -218,7 +209,7 @@ public class SyncController
                                 let response = try moyaResponse.mapString()
                                 let l = response.components(separatedBy: "\n")
                                 let meta = l[0].components(separatedBy: "|")
-                                timestamp = Date.from(UTCString: meta[1])!
+                                syncTimestamp = Date.from(UTCString: meta[1])!
                                 let h = l[1].components(separatedBy: "|")
                                 let header = h.map { $0.camelCased() }
                                 let lines = l.dropFirst(2)
@@ -228,16 +219,19 @@ public class SyncController
 
                                 for line in lines {
                                     let components = line.components(separatedBy: "|")
-                                    let id = components[idIndex]
+                                    let id = Int(components[idIndex])!
 
                                     var dict = [String: String]()
                                     for (index, property) in header.enumerated() {
                                         dict[property] = components[index]
                                     }
 
-                                    if let record = Database.find(modelClass.self, query: NSPredicate(format: "id = \(id)")).first {
+                                    let value = dict["delete"]?.lowercased()
+                                    let notDeleted = value == nil || value != "true"
+
+                                    if let record = Database.realm!.objects(model).filter("id = %@", id).first {
                                         Database.update {
-                                            if (dict["delete"] == nil) || (dict["delete"] != "true") {
+                                            if notDeleted {
                                                 record.importProperties(dictionary: dict, isNew:false)
                                             }
                                             else {
@@ -246,23 +240,26 @@ public class SyncController
                                         }
                                     }
                                     else {
-                                        let record = modelClass.init()
-                                        record.importProperties(dictionary: dict, isNew: true)
-                                        newRecords.append(record)
+                                        if notDeleted {
+                                            let record = model.init()
+                                            record.importProperties(dictionary: dict, isNew: true)
+                                            newRecords.append(record)
+                                        }
                                     }
                                 }
                                 Database.add(newRecords)
+                                resolve(newRecords.count > 0)
                             }
                             catch {
                                 log(error: "Response was impossibly incorrect")
+                                // Might be significant issues, so reset the sync
+                                syncTimestamp = nil
                                 reject(CommonError.miscellaneousNetworkError)
                             }
                         case let .failure(error):
                             log(error: "Server connectivity error \(error.localizedDescription)")
                             reject(CommonError.networkConnectionError)
                         }
-
-                        resolve(Void())
                     }
                 }
             }
@@ -282,8 +279,7 @@ public class SyncController
                 }
 
                 // Make sure there are records to save
-                var predicate = NSPredicate(format: "_sync = \(SyncStatus.created.rawValue) OR _sync = \(SyncStatus.updated.rawValue)")
-                let syncRecords = Database.find(modelClass.self, query: predicate)
+                let syncRecords = Database.realm!.objects(modelClass).filter("_sync = %@ OR _sync = %@", SyncStatus.created.rawValue, SyncStatus.updated.rawValue)
                 guard syncRecords.count > 0 else {
                     return
                 }
@@ -333,11 +329,12 @@ public class SyncController
                                         let components = line.components(separatedBy: "|")
                                         let id = Int(components[0])!
                                         let cid = components[1]
-                                        predicate = NSPredicate(format: "id = \(id) OR clientId = '\(cid)'")
-                                        let item = Database.find(modelClass.self, query: predicate).first!
-                                        Database.update {
-                                            item.id = id
-                                            item._sync = SyncStatus.current.rawValue
+
+                                        if let item = Database.realm!.objects(modelClass).filter("id = %@ OR clientId = %@", id, cid).first {
+                                            Database.update {
+                                                item.id = id
+                                                item._sync = SyncStatus.current.rawValue
+                                            }
                                         }
                                     }
                                 }
@@ -375,7 +372,7 @@ public class SyncController
                 let model = "\(model)"
 
                 // Make sure there are records to delete
-                let syncRecords = Database.find(modelClass.self, query: NSPredicate(format: "_sync = \(SyncStatus.deleted.rawValue)"))
+                let syncRecords = Database.realm!.objects(modelClass).filter("_sync = %@", SyncStatus.deleted.rawValue)
                 guard syncRecords.count > 0 else {
                     return
                 }

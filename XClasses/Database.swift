@@ -22,22 +22,23 @@ class Database {
         return nil
     }
 
+    /// Warning: Do not use if your model is stored in a variable when calling this - will turn an empty result
     class func objects<T: ViewModel>(_ model: T.Type) -> Results<T> {
-        return realm!.objects(T.self).filter(NSPredicate(format: "_deleted = false"))
+        return realm!.objects(T.self).filter("_deleted = false")
     }
 
     /// Return results of query
-    class func find<T: ViewModel>(_ model: T.Type, query: NSPredicate? = nil, orderBy: String? = nil, orderAscending: Bool = false) -> Results<T> {
-        // Realm one day might allow constructed empty results so we can get rid of force unwrapping
-        var results = realm!.objects(T.self).filter(NSPredicate(format: "_deleted = false"))
-        if query != nil {
-            results = results.filter(query!)
-        }
-        if orderBy != nil {
-            results = results.sorted(byKeyPath: orderBy!, ascending: orderAscending)
-        }
-        return results
-    }
+//    class func find<T: ViewModel>(_ model: T.Type, query: NSPredicate? = nil, orderBy: String? = nil, orderAscending: Bool = false) -> Results<T> {
+//        // Realm one day might allow constructed empty results so we can get rid of force unwrapping
+//        var results = realm!.objects(T.self).filter(NSPredicate(format: "_deleted = false"))
+//        if query != nil {
+//            results = results.filter(query!)
+//        }
+//        if orderBy != nil {
+//            results = results.sorted(byKeyPath: orderBy!, ascending: orderAscending)
+//        }
+//        return results
+//    }
 
     class func add(_ object: Object) {
         guard let realm = realm else {
@@ -118,6 +119,15 @@ class Database {
 
 class RealmString: Object {
     @objc dynamic var stringValue = ""
+
+    class func findOrCreate(_ stringValue: String) -> RealmString {
+        if let previousRealmString = Database.realm?.objects(RealmString.self).filter("stringValue = %@", stringValue).first {
+            return previousRealmString
+        }
+        let newString = RealmString(stringValue: stringValue)
+        Database.add(newString)
+        return newString
+    }
 
     init(stringValue: String) {
         super.init()
