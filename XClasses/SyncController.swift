@@ -178,7 +178,7 @@ public class SyncController
                 print("Locked: \(modelName)")
 
                 // Make request with Moya
-                let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos), plugins: [NetworkLoggerPlugin(verbose: true)])
+                let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos))//, plugins: [NetworkLoggerPlugin(verbose: true)])
                 provider.request(.read(version: model.tableVersion, table: model.table, view: model.tableView, accessToken: token, lastTimestamp: syncModel.serverSync, predicate: nil)) { result in
                     // Put autoreleasepool around everything to get all realms
                     autoreleasepool {
@@ -199,7 +199,7 @@ public class SyncController
                                     SyncConfiguration.forbidden()
                                 }
                                 else {
-                                    log(error: "Server returned status code \(moyaResponse.statusCode) while trying to read sync for \(modelName)")
+                                    log(error: "Server returned status code \(moyaResponse.statusCode) while trying to read sync for \(modelName). Response: \(String(describing: try? moyaResponse.mapString()))")
                                 }
                                 reject(CommonError.permissionError)
                                 return
@@ -348,7 +348,7 @@ public class SyncController
                                 reject(CommonError.permissionError)
                             }
                             else {
-                                log(error: "Server returned status code \(moyaResponse.statusCode) while trying to write sync for \(model).")
+                                log(error: "Server returned status code \(moyaResponse.statusCode) while trying to write sync for \(model). Response: \(String(describing: try? moyaResponse.mapString()))")
                                 //print(try! moyaResponse.mapString())
                                 reject(CommonError.permissionError)
                             }

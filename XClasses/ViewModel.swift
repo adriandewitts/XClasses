@@ -61,6 +61,10 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return ["_index"]
     }
 
+    var ignoredWriteProperties: [String] {
+        return []
+    }
+
     class var table: String {
         return String(describing: self)
     }
@@ -181,7 +185,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         let schemaProperties = objectSchema.properties
 
         for property in schemaProperties {
-            if !property.name.hasPrefix("_") {
+            if !property.name.hasPrefix("_") && !ignoredWriteProperties.contains(property.name) {
                 let value = self.value(forKey: property.name)
                 let name = property.name.snakeCased()
 
