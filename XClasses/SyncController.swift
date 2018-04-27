@@ -98,9 +98,10 @@ public class SyncController
         //TODO: Retry a few time if there is an error
         token().then(in: .utility) { token in
             for model in models {
-                self.writeSync(model: model, token: token).then(in: .utility) {}
-                self.deleteSync(model: model, token: token).then(in: .utility) {}
-                self.readSync(model: model, token: token).then(in: .utility) { _ in }
+                // After it is written out, then do a read sequentially. This prevents it from reading the old write before the new write is written.
+                self.writeSync(model: model, token: token).then(in: .utility) {
+                    self.readSync(model: model, token: token).then(in: .utility) { _ in }
+                }
             }
         }.catch() { error in
             for model in models {
@@ -110,7 +111,7 @@ public class SyncController
         }
     }
 
-    /// Instead of responding with a Promise of results, instead return the sync has changed the results in the table. The reason for this is that it is more code to move the Realm response over the thread. Agressive mode will retry if there are no new records, force the request and ignore the sync lock.
+    /// Instead of responding with a Promise of results, instead return the sync has changed the results in the table. The reason for this is that it is more code to move the Realm response over the thread.
     func sync(model: ViewModel.Type, freshness: Double = 600.0, timeout: Double = 60.0) -> Promise<Bool> {
         return Promise<Bool> { resolve, reject, _ in
             autoreleasepool {
@@ -281,6 +282,7 @@ public class SyncController
                 // Make sure there are records to save
                 let syncRecords = Database.realm!.objects(modelClass).filter("_sync = %@ OR _sync = %@", SyncStatus.created.rawValue, SyncStatus.updated.rawValue)
                 guard syncRecords.count > 0 else {
+                    resolve(Void())
                     return
                 }
 
@@ -337,6 +339,8 @@ public class SyncController
                                             }
                                         }
                                     }
+
+                                    resolve(Void())
                                 }
                                 catch {
                                     log(error: "Response was impossibly incorrect")

@@ -39,7 +39,7 @@ class CollectionViewController: UIViewController, ListAdapterDataSource, ListWor
     }
 
     func loadViewModelCollection() {
-        if let relatedRealmCollection = viewModel.relatedCollection as? Results<ViewModel> {
+        if let relatedRealmCollection = viewModel.relatedCollection as? Results<Book> {
             notificationToken = relatedRealmCollection.observe { changes in
                 switch changes {
                 case .initial, .update:
