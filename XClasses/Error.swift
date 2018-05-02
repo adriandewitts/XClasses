@@ -17,6 +17,8 @@ enum CommonError: LocalizedError {
     case unexpectedError
     case timeoutError
     case permissionError
+    case noAccountError
+    case expiredAccountError
     case syncLockError
     case microphonePermissionError
     case emptyField
@@ -36,6 +38,10 @@ enum CommonError: LocalizedError {
             return NSLocalizedString("This is taking too long. We have stopped.", comment: "")
         case .permissionError:
             return NSLocalizedString("You do not have access.", comment: "")
+        case .noAccountError:
+            return NSLocalizedString("The account does not exist. Please try again with a different account.", comment: "")
+        case .expiredAccountError:
+            return NSLocalizedString("The account has expired.", comment: "")
         case .syncLockError:
             return NSLocalizedString("Please wait a little while before trying again.", comment: "")
         case .microphonePermissionError:

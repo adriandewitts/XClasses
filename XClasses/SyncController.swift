@@ -111,7 +111,7 @@ public class SyncController
         }
     }
 
-    /// Instead of responding with a Promise of results, instead return the sync has changed the results in the table. The reason for this is that it is more code to move the Realm response over the thread.
+    /// Instead of responding with a Promise of results, instead return the sync has changed the results in the table. The reason for this is that it is more code to move the Realm response over the thread. Also it is important to do a Realm refresh on your thread, so it can see the new record.
     func sync(model: ViewModel.Type, freshness: Double = 600.0, timeout: Double = 60.0) -> Promise<Bool> {
         return Promise<Bool> { resolve, reject, _ in
             autoreleasepool {
@@ -126,6 +126,10 @@ public class SyncController
                 let interval = serverSync.timeIntervalSince(Date())
                 if interval < freshness && !model.empty {
                     resolve(false)
+                }
+
+                if freshness == 0.0 {
+                    print("Make sure you are calling Refresh on the Realm on your thread, so you can see the new or updated record.")
                 }
 
                 self.token().then() { token in
@@ -176,7 +180,7 @@ public class SyncController
                     syncModel.readLock = Date()
                 }
                 var syncTimestamp: Date? = syncModel.serverSync
-                print("Locked: \(modelName)")
+                //print("Locked: \(modelName)")
 
                 // Make request with Moya
                 let provider = MoyaProvider<WebService>(callbackQueue: DispatchQueue.global(qos: qos))//, plugins: [NetworkLoggerPlugin(verbose: true)])
@@ -189,7 +193,7 @@ public class SyncController
                                     syncModel.readLock = Date.distantPast
                                     syncModel.serverSync = syncTimestamp
                                 }
-                                print("Unlocked: \(modelName)")
+                                //print("Unlocked: \(modelName)")
                             }
                         }
 

@@ -22,7 +22,7 @@ class Database {
         return nil
     }
 
-    /// Warning: Do not use if your model is stored in a variable when calling this - will turn an empty result
+    /// Warning: Do not use if your model is stored in a variable when calling this - it will return an empty result
     class func objects<T: ViewModel>(_ model: T.Type) -> Results<T> {
         return realm!.objects(T.self).filter("_deleted = false")
     }
@@ -70,7 +70,8 @@ class Database {
         }
     }
 
-    class func update(block: ()->()) {
+    // TODO: be able to sync update objects in a collection (like List or Array)
+    class func update(_ object: Any? = nil, block: ()->()) {
         guard let realm = realm else {
             return
         }
@@ -78,6 +79,10 @@ class Database {
         do {
             try realm.write {
                 block()
+
+                if let object = object as? ViewModel {
+                    object._sync = SyncStatus.updated.rawValue
+                }
             }
         }
         catch {
@@ -85,6 +90,7 @@ class Database {
         }
     }
 
+    // TODO: Set the sync for deletes
     class func delete(_ object: Object) {
         guard let realm = realm else {
             return
