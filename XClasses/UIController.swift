@@ -36,7 +36,7 @@ class FlowController: ViewModelManagerDelegate {
     }
 }
 
-class ViewController: UIViewController, ViewModelManagerDelegate {
+class ViewController: UIViewController, ViewModelManagerDelegate, AlertDelegate {
     var viewModel: ViewModelDelegate!
     @IBOutlet var bottomConstraint: NSLayoutConstraint?
 
