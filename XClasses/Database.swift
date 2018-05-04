@@ -27,19 +27,6 @@ class Database {
         return realm!.objects(T.self).filter("_deleted = false")
     }
 
-    /// Return results of query
-//    class func find<T: ViewModel>(_ model: T.Type, query: NSPredicate? = nil, orderBy: String? = nil, orderAscending: Bool = false) -> Results<T> {
-//        // Realm one day might allow constructed empty results so we can get rid of force unwrapping
-//        var results = realm!.objects(T.self).filter(NSPredicate(format: "_deleted = false"))
-//        if query != nil {
-//            results = results.filter(query!)
-//        }
-//        if orderBy != nil {
-//            results = results.sorted(byKeyPath: orderBy!, ascending: orderAscending)
-//        }
-//        return results
-//    }
-
     class func add(_ object: Object) {
         guard let realm = realm else {
             return

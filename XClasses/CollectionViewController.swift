@@ -39,19 +39,37 @@ class CollectionViewController: UIViewController, ListAdapterDataSource, ListWor
     }
 
     func loadViewModelCollection() {
-        if let relatedRealmCollection = viewModel.relatedCollection as? Results<Book> {
-            notificationToken = relatedRealmCollection.observe { changes in
-                switch changes {
-                case .initial, .update:
-                    self.viewModelCollection = Array(relatedRealmCollection)
-                    self.adapter.performUpdates(animated: true)
-                case .error(let error):
-                    log(error: error as! String)
-                }
-            }
-        } else if viewModel.relatedCollection is Array<ViewModelDelegate> {
-            viewModelCollection = viewModel.relatedCollection as! Array<ViewModelDelegate>
+        if let relatedRealmCollection = viewModel.relatedCollection as? Results<ViewModel> {
+            viewModelCollection = Array(relatedRealmCollection)
         }
+        else if let relatedRealmCollection = viewModel.relatedCollection as? Array<ViewModelDelegate> {
+            viewModelCollection = relatedRealmCollection
+        }
+        else {
+            print("Collection must be of type Results<ViewModel> or Array<ViewModelDelegate>")
+        }
+
+        self.adapter.performUpdates(animated: true)
+
+//        if let relatedRealmCollection = viewModel.relatedCollection as? Results<ViewModel> {
+//            print("Observing collection")
+//            notificationToken = relatedRealmCollection.observe { changes in
+//                switch changes {
+//                case .initial, .update:
+//                    self.viewModelCollection = Array(relatedRealmCollection)
+//                    self.adapter.performUpdates(animated: true)
+//                    print(self.viewModelCollection)
+//                case .error(let error):
+//                    log(error: error as! String)
+//                }
+//            }
+//        }
+//        else if viewModel.relatedCollection is Array<ViewModelDelegate> {
+//            viewModelCollection = viewModel.relatedCollection as! Array<ViewModelDelegate>
+//        }
+//        else {
+//            print("Collection must be of type Results<ViewModel> or Array<ViewModelDelegate>")
+//        }
     }
 
     override func prepare(for segue: UIStoryboardSegue, sender: Any?)
