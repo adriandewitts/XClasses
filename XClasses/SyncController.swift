@@ -237,7 +237,7 @@ public class SyncController
                                     if let record = Database.realm!.objects(model).filter("id = %@", id).first {
                                         Database.update {
                                             if notDeleted {
-                                                record.importProperties(dictionary: dict, isNew:false)
+                                                record.importProperties(dictionary: dict, isNew: false)
                                             }
                                             else {
                                                 record._deleted = true

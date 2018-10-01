@@ -113,12 +113,19 @@ class Database {
 class RealmString: Object {
     @objc dynamic var stringValue = ""
 
-    class func findOrCreate(_ stringValue: String) -> RealmString {
+    class func findOrCreate(_ stringValue: String, writeTransaction: Bool = true) -> RealmString {
         if let previousRealmString = Database.realm?.objects(RealmString.self).filter("stringValue = %@", stringValue).first {
             return previousRealmString
         }
+
         let newString = RealmString(stringValue: stringValue)
-        Database.add(newString)
+        if writeTransaction {
+            Database.add(newString)
+        }
+        else {
+            Database.realm?.add(newString)
+        }
+
         return newString
     }
 

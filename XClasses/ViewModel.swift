@@ -142,12 +142,18 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return self.count == 0
     }
 
-    class func findOrCreate(values: [String: Any], name: String) -> Self {
+    class func findOrCreate(values: [String: Any], name: String, writeTransaction: Bool = true) -> Self {
         if let result = Database.realm?.objects(self).filter("%@ = %@", name, values[name] as! CVarArg).first {
             return result
         }
         let newObject = self.init(value: values)
-        Database.add(newObject)
+        if writeTransaction {
+            Database.add(newObject)
+        }
+        else {
+            Database.realm?.add(newObject)
+        }
+
         return newObject
     }
 
@@ -245,8 +251,17 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
                     if property.objectClassName == "RealmString" {
                         let array = dictionary[property.name]!.components(separatedBy: ",")
                         let list = self[property.name] as! List<RealmString>
+                        if isNew {
+                            Database.update {
+                                list.removeAll()
+                            }
+                        }
+                        else {
+                            list.removeAll()
+                        }
+                        
                         for element in array {
-                            list.append(RealmString.findOrCreate(element))
+                            list.append(RealmString.findOrCreate(element, writeTransaction: isNew))
                         }
                     }
                 default:
