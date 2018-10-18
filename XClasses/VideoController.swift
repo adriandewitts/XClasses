@@ -28,7 +28,7 @@ class VideoController: UIViewController {
         super.viewDidLoad()
 
         view.backgroundColor = backgroundColour
-        try? AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayback)
+        try? AVAudioSession.sharedInstance().setCategory(AVAudioSession.Category.playback, mode: AVAudioSession.Mode.moviePlayback, options: AVAudioSession.CategoryOptions.defaultToSpeaker)
         playerLayer = AVPlayerLayer(player: player)
         view.layer.insertSublayer(playerLayer, at: 0)
 

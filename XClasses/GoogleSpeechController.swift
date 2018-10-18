@@ -24,7 +24,7 @@ class GoogleSpeechController: NSObject {
     override init() {
         AKSettings.audioInputEnabled = true
         AKSettings.sampleRate = 32000
-        AKSettings.numberOfChannels = 1
+        AKSettings.channelCount = 1
         microphone = AKMicrophone()
 
         // Use front microphone or default

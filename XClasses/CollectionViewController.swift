@@ -120,7 +120,7 @@ class DefaultSectionController: ListSectionController {
     var lockAxis: Axis { return .x }
     // Changes the cell size to fit on the width or height of the collection view
     var fitToAxis: Bool { return true }
-    var sectionInset: UIEdgeInsets { return UIEdgeInsetsMake(10.0, 10.0, 10.0, 10.0) }
+    var sectionInset: UIEdgeInsets { return UIEdgeInsets(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0) }
     var preferredCellSize: CGSize { return CGSize(width: 150.0, height: 150.0) }
 
     init(viewModel: ViewModel) {
@@ -181,7 +181,7 @@ class CollectionViewCell: UICollectionViewCell, ViewModelManagerDelegate
         self.viewModel = viewModel
         let properties = viewModel.properties
         if let imagePath = properties["image"], let imageURL = URL(string: imagePath) {
-            imageView.contentMode = UIViewContentMode.scaleAspectFit
+            imageView.contentMode = UIView.ContentMode.scaleAspectFit
             Manager.shared.loadImage(with: imageURL, into: imageView)
         }
     }

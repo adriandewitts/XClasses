@@ -20,7 +20,7 @@ class PDFViewController: UIScrollImageViewController
         if let text = viewModel.properties["text"]
         {
             imageView.isAccessibilityElement = true
-            imageView.accessibilityTraits = UIAccessibilityTraitStaticText
+            imageView.accessibilityTraits = UIAccessibilityTraits.staticText
             imageView.accessibilityLabel = text
         }
     }

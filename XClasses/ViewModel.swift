@@ -8,6 +8,7 @@
 
 import Foundation
 import RealmSwift
+import Realm
 import Firebase
 import FirebaseStorage
 import FileKit
@@ -48,7 +49,23 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     @objc dynamic var _deleted = false
 
     // Mark: Override in subclass
-
+    
+    required init(value: [String: Any]) {
+        super.init(value: value)
+    }
+    
+    required init() {
+        super.init()
+    }
+    
+    required init(realm: RLMRealm, schema: RLMObjectSchema) {
+        super.init(realm: realm, schema: schema)
+    }
+    
+    required init(value: Any, schema: RLMSchema) {
+        super.init(value: value, schema: schema)
+    }
+    
     override public class func primaryKey() -> String? {
         return "clientId"
     }
