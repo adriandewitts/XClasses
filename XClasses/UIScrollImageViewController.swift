@@ -19,8 +19,8 @@ class UIScrollImageViewController: ViewController, UIScrollViewDelegate {
         super.viewDidLoad()
 
         // Load in image from viewModel
-        if let imageURL = viewModel.properties["image"] {
-            Manager.shared.loadImage(with: URL(string: imageURL)!, into: imageView)
+        if let imageURL = URL(string: viewModel.properties["image"] ?? "placeholder") {
+            Nuke.loadImage(with: imageURL, into: imageView)
             //TODO: When loaded reset zoom
         }
 

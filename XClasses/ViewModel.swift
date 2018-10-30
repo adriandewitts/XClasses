@@ -420,7 +420,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         let selfRef = ThreadSafeReference(to: self)
         let localURL = fileURL(forKey: key)
         let exists = fileExists(forKey: key)
-        return Promise<URL>(in: .background, { resolve, reject, _ in
+        return Promise<URL>(in: .main, { resolve, reject, _ in
             if !exists || redownload {
                 let realm = try! Realm()
                 let threadSafeSelf = realm.resolve(selfRef)!

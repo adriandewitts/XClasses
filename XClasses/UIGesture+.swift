@@ -25,7 +25,7 @@ public extension UIPanGestureRecognizer
     public var direction: Direction?
     {
         let velocity = self.velocity(in: view)
-        let vertical = fabs(velocity.y) > fabs(velocity.x)
+        let vertical = abs(velocity.y) > abs(velocity.x)
         switch (vertical, velocity.x, velocity.y)
         {
             case (true, _, let y) where y < 0: return .Up

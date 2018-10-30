@@ -97,8 +97,8 @@ class CollectionViewController: UIViewController, ListAdapterDataSource, ListWor
         if let sectionController = sectionController as? DefaultSectionController {
             let viewModel = sectionController.viewModel
             if let imagePath = viewModel.properties["image"], let imageURL = URL(string: imagePath) {
-                let preheater = Preheater(manager: Manager.shared)
-                let requests = [Request(url: imageURL)]
+                let preheater = ImagePreheater()
+                let requests = [ImageRequest(url: imageURL)]
                 preheater.startPreheating(with: requests)
             }
         }
@@ -182,7 +182,7 @@ class CollectionViewCell: UICollectionViewCell, ViewModelManagerDelegate
         let properties = viewModel.properties
         if let imagePath = properties["image"], let imageURL = URL(string: imagePath) {
             imageView.contentMode = UIView.ContentMode.scaleAspectFit
-            Manager.shared.loadImage(with: imageURL, into: imageView)
+            Nuke.loadImage(with: imageURL, options: ImageLoadingOptions(placeholder: UIImage(named: "Placeholder"), transition: .fadeIn(duration: 0.15)), into: imageView)
         }
     }
 }
