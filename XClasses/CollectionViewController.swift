@@ -50,6 +50,8 @@ class CollectionViewController: UIViewController, ListAdapterDataSource, ListWor
         }
 
         self.adapter.performUpdates(animated: true)
+        
+        // Realm crashes this because objects drop out of memory - very annoying
 
 //        if let relatedRealmCollection = viewModel.relatedCollection as? Results<ViewModel> {
 //            print("Observing collection")
@@ -120,14 +122,14 @@ class DefaultSectionController: ListSectionController {
     var lockAxis: Axis { return .x }
     // Changes the cell size to fit on the width or height of the collection view
     var fitToAxis: Bool { return true }
-    var sectionInset: UIEdgeInsets { return UIEdgeInsets(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0) }
+    var cellInset: UIEdgeInsets { return UIEdgeInsets(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0) }
     var preferredCellSize: CGSize { return CGSize(width: 150.0, height: 150.0) }
 
     init(viewModel: ViewModel) {
         self.viewModel = viewModel
         super.init()
 
-        self.inset = sectionInset
+        self.inset = cellInset
     }
 
     override func sizeForItem(at index: Int) -> CGSize {
@@ -140,7 +142,7 @@ class DefaultSectionController: ListSectionController {
             var resizer: CGFloat = 0.0
 
             if lockAxis == .x {
-                let spacing = sectionInset.left + sectionInset.right
+                let spacing = cellInset.left + cellInset.right
                 let cellAndSpacingWidth = preferredCellSize.width + spacing
                 let numberOfCells = floor(collectionViewSize.width / cellAndSpacingWidth)
                 let widthSansSpacing = collectionViewSize.width - (spacing * numberOfCells)
@@ -149,7 +151,7 @@ class DefaultSectionController: ListSectionController {
 
             }
             else if lockAxis == .y {
-                let spacing = sectionInset.top + sectionInset.bottom
+                let spacing = cellInset.top + cellInset.bottom
                 let cellAndSpacingHeight = preferredCellSize.height + spacing
                 let numberOfCells = floor(collectionViewSize.height / cellAndSpacingHeight)
                 let heightSansSpacing = collectionViewSize.height - (spacing * numberOfCells)
