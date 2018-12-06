@@ -10,7 +10,8 @@ import Foundation
 import Realm
 import RealmSwift
 
-// Realm functions
+/// The Database class has convenience functions which check that Realm works and then logs any exceptions. This saves having to do exception handling throughout the code base.
+/// This covers
 class Database {
     class var realm: Realm? {
         do {

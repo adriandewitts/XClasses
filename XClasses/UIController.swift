@@ -34,6 +34,13 @@ class FlowController: ViewModelManagerDelegate {
             FlowController.shared.viewModel = viewModel
         }
     }
+    
+    class var hasViewModel: Bool {
+        if FlowController.shared.viewModel != nil {
+            return true
+        }
+        return false
+    }
 }
 
 class ViewController: UIViewController, ViewModelManagerDelegate, AlertDelegate {

@@ -17,8 +17,8 @@ import IGListKit
 import Hydra
 
 protocol ViewModelDelegate {
-    var properties: [String: String]  { get }
-    var relatedCollection: Any { get }
+    func viewProperty(forKey: String) -> Any?
+    var relatedCollection: Array<ViewModelDelegate> { get }
 }
 
 enum SyncStatus: Int {
@@ -113,13 +113,12 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return false
     }
 
-    var properties: [String: String] {
-        return [:]
+    var relatedCollection: Array<ViewModelDelegate> {
+        return Array(Database.objects(ViewModel.self))
     }
-
-    var relatedCollection: Any {
-        let realm = try! Realm()
-        return realm.objects(ViewModel.self)
+    
+    func viewProperty(forKey: String) -> Any? {
+        return self[forKey]
     }
 
     // ListDiffable implementation
@@ -141,7 +140,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     - **localURL** Path to local file
     - **expiry** when file is deleted locally (in seconds)
     - **deleteOnUpload** as it says
-    - **uploadStatusField**
+    - **fileUpdatedField**
     */
     class var fileAttributes: [String: FileModel] {
         return ["default": FileModel(bucket: "default", serverPath: "/{clientID}.png", localURL: "/{clientID}.png", expiry: 3600, deleteOnUpload: true, fileUpdatedField: "")]
@@ -209,7 +208,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 
         for property in schemaProperties {
             if !property.name.hasPrefix("_") && !ignoredWriteProperties.contains(property.name) {
-                let value = self.value(forKey: property.name)
+                let value = self[property.name] // self.value(forKey: property.name)
                 let name = property.name.snakeCased()
 
                 switch property.type {
