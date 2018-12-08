@@ -16,11 +16,19 @@ import Alamofire
 import IGListKit
 import Hydra
 
+/// Models need to conform to ViewModelDelegate for many of the sub classed view controlers in this framework.
 protocol ViewModelDelegate {
     func viewProperty(forKey: String) -> Any?
     var relatedCollection: Array<ViewModelDelegate> { get }
 }
 
+/**
+ SyncStatus contains the current syncronisation status of the ViewModel. This makes it easy to find records that need to be processed in syncronisation.
+ - **current** The ViewModel is up to date.
+ - **created** The ViewModel is new, and will need to be uploaded to the server.
+ - **updated** The ViewModel has been updated since it's last sync, and will need to be uploaded to the server.
+ - **deleted** The ViewModel is set to be deleted. This is so it can be deleted on the server, and then deleted in the client database.
+ */
 enum SyncStatus: Int {
     case current
     case created
@@ -28,6 +36,15 @@ enum SyncStatus: Int {
     case deleted
 }
 
+/**
+ Filemodel contains information on the remote file.
+ - **bucket** The google bucket storage name
+ - **serverPath** The rest of the path of the folder within the bucket. Start with /
+ - **localURL** Path to local file
+ - **expiry** when file is deleted locally (in seconds)
+ - **deleteOnUpload** as it says
+ - **fileUpdatedField**
+ */
 struct FileModel {
     let bucket: String
     let serverPath: String
@@ -40,15 +57,19 @@ struct FileModel {
 // TODO: Record cleanup - periodically - on fresh start
 // TODO: File cleanup after certain age
 
+/// When a model class sub classes the ViewModel it inherits the syncronisation functions that work with SyncControler. These include functions to serialise data, syncronisation functions and file uploading and downloading.
 public class ViewModel: Object, ViewModelDelegate, ListDiffable {
+    /// The default sync timeout across ViewModels
     static let tryAgain = 60.0
-
-    @objc dynamic var _sync = SyncStatus.created.rawValue // Record status for syncing
-    @objc dynamic var id = 0 // Server ID - do not make primary key, as they are unchangeable
+    
+    /// Keeps the syncronisation status of a SyncStatus enum.
+    @objc dynamic var _sync = SyncStatus.created.rawValue
+    /// The server id. Do not make primary key as it is set on the first time it is synced.
+    @objc dynamic var id = 0
+    /// This is syncronised and useful for making sure records are not duplicated server side.
     @objc dynamic var clientId = UUID().uuidString // Used to make sure records aren't saved to the server DB multiple times
+    /// Useful to ignore in searches.
     @objc dynamic var _deleted = false
-
-    // Mark: Override in subclass
     
     required init(value: [String: Any]) {
         super.init(value: value)
@@ -66,6 +87,8 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         super.init(value: value, schema: schema)
     }
     
+    // MARK: The default Realm overrides.
+    
     override public class func primaryKey() -> String? {
         return "clientId"
     }
@@ -81,51 +104,60 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     var ignoredWriteProperties: [String] {
         return []
     }
+    
+    // MARK: Other defaults to be overriden.
 
+    /// The corresponding server database table.
     class var table: String {
         return String(describing: self)
     }
 
+    /// The version of the table view.
     class var tableVersion: Float {
         return 1.0
     }
 
+    /// This is akin to table views, and can have a subset of columns.
     class var tableView: String {
         return "default"
     }
 
+    /// Can'tr rememeber why I needed to have internal versioning.
     class var internalVersion: Float {
         return 1.0
     }
 
-    // Can read from service
+    /// Can read from server.
     class var read: Bool {
         return true
     }
 
-    // Can write to service
+    /// Can write to server.
     class var write: Bool {
         return false
     }
 
-    // Needs authentication before reading from server
+    /// Needs authentication before reading from server.
     class var authenticate: Bool {
         return false
     }
 
+    /// An array of related objects that relate to this object. In future will be a function that can have different types of related collections.
     var relatedCollection: Array<ViewModelDelegate> {
         return Array(Database.objects(ViewModel.self))
     }
     
+    /// By default will return any of the objects properties for the View classes. This needs to be overriden to include calculated properties. In future would like to be able to return normal and calculated properties - but will require the moving away from Realm.
     func viewProperty(forKey: String) -> Any? {
         return self[forKey]
     }
 
-    // ListDiffable implementation
+    /// ListDiffable implementation for IGListKit.
     public func diffIdentifier() -> NSObjectProtocol {
         return clientId as NSObjectProtocol
     }
 
+    /// ListDiffable implementation for IGListKit.
     public func isEqual(toDiffableObject object: ListDiffable?) -> Bool {
         if let object = object as? ViewModel {
             return clientId == object.clientId
@@ -146,18 +178,19 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return ["default": FileModel(bucket: "default", serverPath: "/{clientID}.png", localURL: "/{clientID}.png", expiry: 3600, deleteOnUpload: true, fileUpdatedField: "")]
     }
 
-    // End of overrides
+    // MARK: End of overrides
 
-    /// Count all objects in the table
+    /// Count all objects in the table.
     class var count: Int {
         return objects().count
     }
 
-    /// Check if the table is empty
+    /// Check if the table is empty.
     class var empty: Bool {
         return self.count == 0
     }
 
+    /// Convenience function to either find the same existing record (by the name property), or create it new.
     class func findOrCreate(values: [String: Any], name: String, writeTransaction: Bool = true) -> Self {
         if let result = Database.realm?.objects(self).filter("%@ = %@", name, values[name] as! CVarArg).first {
             return result
@@ -173,6 +206,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return newObject
     }
 
+    /// Return all objects from the class and filter out _deleted.
     class func objects() -> Results<ViewModel> {
         return Database.realm!.objects(self).filter("_deleted = false")
     }
@@ -183,6 +217,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 //        return filter?.first
 //    }
 
+    /// Convenience function for storing one of the records in the user defaults.
     func setAsUserDefault(forKey key: String) {
         if id > 0 {
             UserDefaults.standard.set(id, forKey: key + "Id")
@@ -191,6 +226,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         UserDefaults.standard.set(clientId, forKey: key + "ClientId")
     }
 
+    /// Convenience function for retrieving one of the records in the user defaults.
     class func userDefault(key: String) -> Self? {
         let id = UserDefaults.standard.integer(forKey: key + "Id")
         if id > 0, let result = Database.objects(self).filter(NSPredicate(format: "id = %@", id)).first {
@@ -201,7 +237,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return Database.objects(self).filter(NSPredicate(format: "clientId = %@", clientId ?? "")).first
     }
 
-    /// Prepares the model as a Dictionary, excluding prefixed underscored properties
+    /// Prepares the model as a Dictionary, excluding prefixed underscored properties. This is used in syncronisation.
     func exportProperties() -> [String: String] {
         var properties = [String: String]()
         let schemaProperties = objectSchema.properties
@@ -231,7 +267,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return properties
     }
 
-    /// Imports the data from a dictionary and does the type casting that it needs to do.
+    /// Imports the data from a dictionary and does the type casting that it needs to do. Used in syncronisation.
     func importProperties(dictionary: [String: String], isNew: Bool){
         let schemaProperties = objectSchema.properties
         for property in schemaProperties {
@@ -289,23 +325,27 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         }
     }
 
-    // File handling
+    // MARK: File handling
 
+    /// Does file exist on file system.
     func fileExists(forKey: String = "default") -> Bool {
         return path().exists
     }
 
+    /// Where is the file on the local file system.
     func fileURL(forKey: String = "default") -> (URL)
     {
         return path(forKey: forKey).url
     }
 
+    /// Where is the path on the local file system.
     func path(forKey: String = "default") -> Path
     {
         let fileAttributes = type(of: self).fileAttributes[forKey]!
         return Path(replaceOccurrence(of: fileAttributes.localURL))
     }
 
+    /// Whereis the server url of the syncronised file.
     func serverURL(forKey: String = "default") -> URL
     {
         let fileAttributes = type(of: self).fileAttributes[forKey]!
@@ -351,6 +391,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 //    }
 
     // TODO: Add progress
+    /// Upload file to server.
     func putFile(key: String = "default") -> Promise<URL> {
         let selfRef = ThreadSafeReference(to: self)
         return Promise<URL>(in: .background, { resolve, reject, _ in
@@ -415,6 +456,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 
 
     // TODO: Add NSProgress to method
+    /// Get file from server.
     func getFile(key: String = "default", redownload: Bool = false) -> Promise<URL> {
         let selfRef = ThreadSafeReference(to: self)
         let localURL = fileURL(forKey: key)

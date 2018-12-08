@@ -10,9 +10,9 @@ import Foundation
 import Realm
 import RealmSwift
 
-/// The Database class has convenience functions which check that Realm works and then logs any exceptions. This saves having to do exception handling throughout the code base.
-/// This covers
+/// The Database class has convenience functions for dealing with Realm. Realm will be removed in future.
 class Database {
+    /// Check that Realm is available, otherwise log any exceptions. This saves having to do exception handling throughout code.
     class var realm: Realm? {
         do {
             return try Realm()
@@ -23,11 +23,12 @@ class Database {
         return nil
     }
 
-    /// Warning: Do not use if your model is stored in a variable when calling this - it will return an empty result
+    /// Will return all objects of model Type that are not _deleted. **Warning** Do not use if your model type is stored in a variable - it will return an empty result.
     class func objects<T: ViewModel>(_ model: T.Type) -> Results<T> {
         return realm!.objects(T.self).filter("_deleted = false")
     }
 
+    /// Add object model to database.
     class func add(_ object: Object) {
         guard let realm = realm else {
             return
@@ -43,6 +44,7 @@ class Database {
         }
     }
 
+    /// Add multiple objects to database.
     class func add<S: Sequence>(_ objects: S) where S.Iterator.Element: Object {
         guard let realm = realm else {
             return
@@ -59,6 +61,7 @@ class Database {
     }
 
     // TODO: be able to sync update objects in a collection (like List or Array)
+    /// Update objects, as well as the sync status to be updated on that object. Will be uploaded when explicity synced.
     class func update(_ object: Any? = nil, block: ()->()) {
         guard let realm = realm else {
             return
@@ -79,6 +82,7 @@ class Database {
     }
 
     // TODO: Set the sync for deletes
+    /// Delete objects
     class func delete(_ object: Object) {
         guard let realm = realm else {
             return
@@ -94,6 +98,7 @@ class Database {
         }
     }
 
+    /// Delete multiple objects
     class func delete<S: Sequence>(_ objects: S) where S.Iterator.Element: Object {
         guard let realm = realm else {
             return
@@ -110,7 +115,7 @@ class Database {
     }
 }
 
-
+/// A RealmString is required so you can have an array of strings in Realm (the string needs to be encapsulated in an object).
 class RealmString: Object {
     @objc dynamic var stringValue = ""
 
