@@ -25,6 +25,7 @@ enum PDFError: LocalizedError {
     }
 }
 
+/// PDFDocument handles the opening and image caching of a PDF. When a page is drawn and cached, it will also draw and cache the pages before and after that page.
 class PDFDocument {
     let cachedImages = NSCache<NSNumber, UIImage>()
     let cacheImageCount = 5
@@ -53,6 +54,7 @@ class PDFDocument {
         }
     }
 
+    /// Draw and cache the current page as well as the pages before and after the current page.
     func cachePages(pageNumber: Int, size: CGSize = UIScreen.main.bounds.size) {
         cachePage(pageNumber: pageNumber, size: size)
         
@@ -63,6 +65,7 @@ class PDFDocument {
         }
     }
 
+    /// Cache page in object.
     func cachePage(pageNumber: Int, size: CGSize = UIScreen.main.bounds.size) {
         let n = NSNumber(value: pageNumber)
         let cachedImage = cachedImages.object(forKey: n)

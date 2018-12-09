@@ -9,8 +9,8 @@
 import UIKit
 import Nuke
 
-class Button: UIButton, ViewModelManagerDelegate
-{
+/// Button contains its related ViewModel.
+class Button: UIButton, ViewModelManagerDelegate {
     var viewModel: ViewModelDelegate!
 
     func assignViewModelToView(viewModel: ViewModelDelegate) {
@@ -32,12 +32,14 @@ class Button: UIButton, ViewModelManagerDelegate
 //    }
 }
 
+/// ImageView contains its related ViewModel.
 class ImageView: UIImageView, ViewModelManagerDelegate {
     var viewModel: ViewModelDelegate!
 }
 
 private var propertyMapHandle: UInt8 = 0
 
+/// Contains useful properties for IB.
 extension UIView {
     @IBInspectable var cornerRadius: CGFloat {
         get {
@@ -94,11 +96,6 @@ extension UIView {
         return nil
     }
     
-    // Iterates through and finds ones with a property map - ignores collection views
-    // if UIImage get image if url
-    // if label set text
-    // will return all mapped views in dictionary
-    
     /// Finds Subviews with property maps and sets their attributes based on the ViewModel
     func map(viewModel: ViewModelDelegate) -> [String: UIView] {
         // Return what you map
@@ -115,6 +112,7 @@ extension UIView {
         return mappedViews
     }
     
+    /// Looks for Image Views, Labels (and eventually Buttons) with set Property Maps, and uses the property value in the corresponding model to set the label and/or image.
     func magic(withValue value: Any) {
         // Set image in UIImageView to url with Nuke
         // TODO: Set image from bundle resource

@@ -9,7 +9,8 @@
 import UIKit
 import Hydra
 
-class PDFViewController: UIScrollImageViewController {
+/// The View Controller of a PDF Page.
+class PDFViewController: ScrollImageViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 

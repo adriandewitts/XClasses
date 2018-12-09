@@ -14,10 +14,8 @@ enum Aspect {
     case fill
 }
 
-extension Device
-{
-    static var scaleMultiplier: CGFloat
-    {
+extension Device {
+    static var scaleMultiplier: CGFloat {
         let scale = Device.scale
 
         switch scale {
@@ -37,10 +35,8 @@ extension Device
     }
 }
 
-extension CGPDFDocument
-{
-    func imageFromPage(number: Int, with size: CGSize, aspect: Aspect = .fill) -> UIImage?
-    {
+extension CGPDFDocument {
+    func imageFromPage(number: Int, with size: CGSize, aspect: Aspect = .fill) -> UIImage? {
         guard let page = page(at: number) else {
             return nil
         }
@@ -79,8 +75,7 @@ extension CGRect {
 }
 
 extension CGSize {
-    func resizingAndScaling(to size: CGSize, with aspect: Aspect = .fill) -> (CGSize, CGFloat)
-    {
+    func resizingAndScaling(to size: CGSize, with aspect: Aspect = .fill) -> (CGSize, CGFloat) {
         // Have to make these Doubles because we use min and max which expects them
         let width = Double(self.width)
         let height = Double(self.height)
@@ -110,4 +105,14 @@ extension UIScrollView {
         let centeredRect = CGRect(x: visibleRect.origin.x + (visibleRect.size.width / 2.0) - (contentRect.size.width / 2.0), y: visibleRect.origin.y + (visibleRect.size.height / 2.0) - (contentRect.size.height / 2.0), width: contentRect.size.width, height: contentRect.size.height)
         scrollRectToVisible(centeredRect, animated: animated)
     }
+}
+
+extension UIStoryboard {
+    class func controller(_ identifier: String, storyboard: String = "Main") -> UIViewController {
+        return UIStoryboard(name: storyboard, bundle: nil).instantiateViewController(withIdentifier: identifier)
+    }
+}
+
+func screenSize() -> CGSize {
+    return UIScreen.main.bounds.size
 }

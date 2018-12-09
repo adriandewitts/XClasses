@@ -9,6 +9,7 @@
 import UIKit
 import AVKit
 
+/// Video controller is a full screen video controller that plays automatically. On completion will call the closure, so you can clean it up.
 class VideoController: UIViewController {
     var resource: URL?
     var backgroundColour = UIColor.black

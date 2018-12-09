@@ -391,7 +391,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 //    }
 
     // TODO: Add progress
-    /// Upload file to server.
+    /// Upload file to Google Cloud storage.
     func putFile(key: String = "default") -> Promise<URL> {
         let selfRef = ThreadSafeReference(to: self)
         return Promise<URL>(in: .background, { resolve, reject, _ in
@@ -456,7 +456,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 
 
     // TODO: Add NSProgress to method
-    /// Get file from server.
+    /// Get file from Google Cloud Storage.
     func getFile(key: String = "default", redownload: Bool = false) -> Promise<URL> {
         let selfRef = ThreadSafeReference(to: self)
         let localURL = fileURL(forKey: key)

@@ -10,15 +10,14 @@ import Foundation
 import Moya
 import Alamofire
 
-enum WebService
-{
+enum WebService {
     case read(version: Float, table: String, view: String, accessToken: String?, lastTimestamp: Date?, predicate: String?)
     case createAndUpdate(version: Float, table: String, view: String, accessToken: String, records: [ViewModel])
     case delete(version: Float, table: String, view: String, accessToken: String, records: [ViewModel])
 }
 
-extension WebService: TargetType
-{
+/// Configures Moya to manage communications to the server.
+extension WebService: TargetType {
     var headers: [String : String]? {
         return ["Content-type": "application/csv"]
     }
@@ -69,12 +68,10 @@ extension WebService: TargetType
     }
 }
 
-struct PipeEncoding: ParameterEncoding
-{
+struct PipeEncoding: ParameterEncoding {
     public static var `default`: PipeEncoding { return PipeEncoding() }
 
-    public func encode(_ urlRequest: URLRequestConvertible, with parameters: Parameters?) throws -> URLRequest
-    {
+    public func encode(_ urlRequest: URLRequestConvertible, with parameters: Parameters?) throws -> URLRequest {
         var urlRequest = try urlRequest.asURLRequest()
         guard var parameters = parameters else { return urlRequest }
         let records = parameters.removeValue(forKey: "records") as! Array<ViewModel>
@@ -89,15 +86,12 @@ struct PipeEncoding: ParameterEncoding
         let propertyNames = records[0].exportProperties().keys
         lines.append(propertyNames.joined(separator: "|"))
 
-        for record in records
-        {
+        for record in records {
             let properties = record.exportProperties()
             var elements = [String]()
-            for propertyName in propertyNames
-            {
+            for propertyName in propertyNames {
                 var value = properties[propertyName]!
-                if let i = value.index(of: "|")
-                {
+                if let i = value.index(of: "|") {
                     value.remove(at: i)
                 }
                 elements.append(value)
@@ -107,8 +101,7 @@ struct PipeEncoding: ParameterEncoding
 
         urlRequest.httpBody = lines.joined(separator: "\n").data(using: .utf8)
 
-        if urlRequest.value(forHTTPHeaderField: "Content-Type") == nil
-        {
+        if urlRequest.value(forHTTPHeaderField: "Content-Type") == nil {
             urlRequest.setValue("application/pipe", forHTTPHeaderField: "Content-Type")
         }
 

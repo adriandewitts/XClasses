@@ -8,7 +8,8 @@
 import UIKit
 import Nuke
 
-class UIScrollImageViewController: ViewController, UIScrollViewDelegate {
+/// The Scroll Image View Controller purpose is to manage an image in a scrollview. This is common with gallery images or PDF views.
+class ScrollImageViewController: ViewController, UIScrollViewDelegate {
     @IBOutlet var emptyView: UIView?
     @IBOutlet var scrollView: UIScrollView!
     @IBOutlet var imageView: UIImageView!
@@ -90,13 +91,11 @@ class UIScrollImageViewController: ViewController, UIScrollViewDelegate {
 
     // Gestures
 
-    @objc func toggleNavigation(tapGesture: UITapGestureRecognizer)
-    {
+    @objc func toggleNavigation(tapGesture: UITapGestureRecognizer) {
         navigationController?.setNavigationBarHidden(navigationController?.isNavigationBarHidden == false, animated: true)
     }
 
-    @objc func zoomView(tapGesture: UITapGestureRecognizer)
-    {
+    @objc func zoomView(tapGesture: UITapGestureRecognizer) {
         if (scrollView.zoomScale == scrollView.minimumZoomScale) {
             // Zoom in
             let center = tapGesture.location(in: scrollView)

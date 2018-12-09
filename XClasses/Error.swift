@@ -10,6 +10,7 @@ import Foundation
 import Firebase
 import AssistantKit
 
+/// Common errors are the expected errors that we can anticipate.
 enum CommonError: LocalizedError {
     case networkConnectionError
     case miscellaneousNetworkError
@@ -55,6 +56,7 @@ enum CommonError: LocalizedError {
     }
 }
 
+/// Errors can be logged here, which will get sent to Crashlytics.
 func log(error: String, file: String = #file, function: String = #function, line: Int = #line) {
     let fileName = file.split(separator: "/").last?.split(separator: ".").first ?? "Unknown"
     let crashlyticsError = NSError(domain: "iOS.\(fileName).\(function)", code: line, userInfo: ["description": error])
@@ -68,6 +70,7 @@ protocol AlertDelegate {
     func presentAlert(title: String, image: UIImage?, cancel: Bool, completion: (() -> Void)?)
 }
 
+/// The Alert Delegate can automatically show errors in modals.
 extension AlertDelegate {
     func presentErrorAlert(error: Error, image: UIImage? = nil, completion: (() -> Void)? = nil) {
         presentAlert(title: error.localizedDescription, image: image, cancel: false) {

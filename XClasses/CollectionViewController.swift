@@ -13,6 +13,7 @@ import RealmSwift
 
 //TODO: Autolayout for cells. At the moment we calculate the size
 
+/// CollectionView Controller hold ViewModel and its viewModelCollection and configures best practices for UIViewController. It implements IGListKit. This is currently in flux.
 class CollectionViewController: UIViewController, ListAdapterDataSource, ViewModelManagerDelegate /*, ListWorkingRangeDelegate */ {
     @IBOutlet var emptyView: UIView?
     @IBOutlet var collectionView: UICollectionView!

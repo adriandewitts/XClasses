@@ -13,11 +13,13 @@ import Moya
 import FileKit
 import Hydra
 
-/// Sync model stores meta data for each model
+/// Sync model stores meta data for each table. These are when the database was last synced, and if it is currently in lock (which will only last a minute because of timeouts).
 public class SyncModel: Object
 {
     @objc dynamic var modelName = ""
-    @objc dynamic var serverSync: Date? = nil // Server timestamp of last server sync. To be used on next sync request
+    /// Server timestamp of last server sync. Used on next sync request.
+    @objc dynamic var serverSync: Date? = nil
+    /// Each lock will prevent another request being initiated while it does its sync.
     @objc dynamic var readLock = Date.distantPast
     @objc dynamic var writeLock = Date.distantPast
     @objc dynamic var deleteLock = Date.distantPast
@@ -28,15 +30,15 @@ public class SyncModel: Object
     }
 }
 
-public class SyncController
-{
+/// The SyncController is a shared controller and manages the sync between the client and server.
+public class SyncController {
     static let shared = SyncController()
     static let serverTimeout = 60.0
     static let retries = 60
     static let retrySleep: UInt32 = 1
     var uid = ""
 
-    /// Configure sets up the meta data for each synced table
+    /// Configure sets up the SyncModels for each synced table. This is setup in the AppDelegate when app is first loaded.
     func configure(models: [ViewModel.Type]) {
         // Looking for a Realm Configuration in a separate Migrator class which is defined outside of the library
         var config = Migrator.configuration
@@ -58,7 +60,7 @@ public class SyncController
         }
     }
 
-    /// Configure file will create needed folders to store synced files
+    /// Configure file will create needed folders to store synced files. This is setup in the AppDelegate when app is first loaded.
     func configureFile(models: [ViewModel.Type]) {
         for model in models {
             let paths = model.fileAttributes
@@ -71,7 +73,7 @@ public class SyncController
         }
     }
 
-    /// Token will get the user token and return this as a Promise
+    /// Token will get the user token and return this as a Promise.
     func token() -> Promise<String> {
         return Promise<String> { resolve, reject, _ in
             guard let user = Auth.auth().currentUser else {
@@ -155,7 +157,7 @@ public class SyncController
         }
     }
 
-    /// Read sync make a request to the web service and stores new record to the local DB. Will also mark records for deletion
+    /// Read sync make a request to the web service and stores new record to the local DB. Will also mark records for deletion.
     func readSync(model: ViewModel.Type, token: String? = nil, qos: DispatchQoS.QoSClass = .utility) -> Promise<Bool> {
         return Promise<Bool> { resolve, reject, _ in
             autoreleasepool {
@@ -271,6 +273,7 @@ public class SyncController
         }
     }
 
+    /// Write sync uploads new and updated records from the local DB to the server.
     func writeSync(model: ViewModel.Type, token: String? = nil, qos: DispatchQoS.QoSClass = .utility) -> Promise<Void> {
         return Promise<Void> { resolve, reject, _ in
             autoreleasepool {
@@ -370,7 +373,7 @@ public class SyncController
         }
     }
 
-    /// Warning deleteSync has not been used or tested
+    /// Warning deleteSync has not been used or tested.
     func deleteSync(model: ViewModel.Type, token: String? = nil, qos: DispatchQoS.QoSClass = .utility) -> Promise<Void> {
         return Promise<Void> { resolve, reject, _ in
             autoreleasepool {

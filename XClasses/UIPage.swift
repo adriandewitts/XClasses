@@ -10,6 +10,7 @@ import UIKit
 
 // TODO: Depracate and move to CollectionView
 
+/// A subclass of a UIPageViewController to connect the the collection of ViewModels with Page View Controllers.
 class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSource, UIPageViewControllerDelegate, ViewModelManagerDelegate
 {
     var viewModel: ViewModelDelegate!
@@ -23,7 +24,7 @@ class XUIPageViewController: UIPageViewController, UIPageViewControllerDataSourc
         delegate = self
 
         viewModel = FlowController.viewModel
-        viewModelCollection = viewModel.relatedCollection as! Array<ViewModelDelegate>
+        viewModelCollection = viewModel.relatedCollection
 
         if let firstViewModel = viewModelCollection.first {
             setViewControllers([controller(for: firstViewModel)], direction: .forward, animated: true, completion: nil)
