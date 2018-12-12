@@ -228,9 +228,8 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 
     /// Convenience function for retrieving one of the records in the user defaults.
     class func userDefault(key: String) -> Self? {
-        let clientId = UserDefaults.standard.string(forKey: key + "ClientId")
-        if clientId != nil {
-            return Database.objects(self).filter(NSPredicate(format: "clientId = %@", clientId ?? "")).first
+        if let clientId = UserDefaults.standard.string(forKey: key + "ClientId") {
+            return Database.objects(self).filter(NSPredicate(format: "clientId = %@", clientId )).first
         }
         
         let id = UserDefaults.standard.integer(forKey: key + "Id")
