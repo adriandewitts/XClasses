@@ -228,13 +228,16 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 
     /// Convenience function for retrieving one of the records in the user defaults.
     class func userDefault(key: String) -> Self? {
+        if let clientId = UserDefaults.standard.string(forKey: key + "ClientId") {
+            return Database.objects(self).filter(NSPredicate(format: "clientId = %@", clientId )).first
+        }
+        
         let id = UserDefaults.standard.integer(forKey: key + "Id")
         if id > 0, let result = Database.objects(self).filter(NSPredicate(format: "id = %@", id)).first {
             return result
         }
-
-        let clientId = UserDefaults.standard.string(forKey: key + "ClientId")
-        return Database.objects(self).filter(NSPredicate(format: "clientId = %@", clientId ?? "")).first
+        
+        return nil
     }
 
     /// Prepares the model as a Dictionary, excluding prefixed underscored properties. This is used in syncronisation.
