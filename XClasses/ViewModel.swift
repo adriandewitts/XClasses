@@ -397,7 +397,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     /// Upload file to Google Cloud storage.
     func putFile(key: String = "default") -> Promise<URL> {
         let selfRef = ThreadSafeReference(to: self)
-        return Promise<URL>(in: .background, { resolve, reject, _ in
+        return Promise<URL>(in: .main, { resolve, reject, _ in
             guard let threadSafeSelf = Database.realm?.resolve(selfRef) else {
                 return
             }
