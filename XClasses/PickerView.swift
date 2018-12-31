@@ -296,7 +296,7 @@ public class PickerView: UIView, UICollectionViewDataSource, UICollectionViewDel
     
     // MARK: Private Properties
     /// Private. A UICollectionView which shows contents on cells.
-    fileprivate var collectionView: UICollectionView!
+    var collectionView: UICollectionView!
     /// Private. An intercepter to hook UICollectionViewDelegate then throw it picker view and its delegate
     fileprivate var intercepter: PickerViewDelegateIntercepter!
     /// Private. A UICollectionViewFlowLayout used in picker view's collection view.
