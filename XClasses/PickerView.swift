@@ -352,10 +352,11 @@ public class PickerView: UIView, UICollectionViewDataSource, UICollectionViewDel
     // MARK: Layout
     open override func layoutSubviews() {
         super.layoutSubviews()
-        if self.dataSource != nil && self.dataSource!.numberOfItemsInPickerView(self) > 0 {
+        if let source = dataSource, source.numberOfItemsInPickerView(self) > 0 && selectedItem < source.numberOfItemsInPickerView(self) {
             self.collectionView.collectionViewLayout = self.collectionViewLayout
             self.scrollToItem(self.selectedItem, animated: false)
         }
+        
         self.collectionView.layer.mask?.frame = self.collectionView.bounds
     }
     
@@ -436,6 +437,10 @@ public class PickerView: UIView, UICollectionViewDataSource, UICollectionViewDel
      :param: animated True if the scrolling should be animated, false if it should be immediate.
      */
     public func scrollToItem(_ item: Int, animated: Bool = false) {
+        guard let source = dataSource, source.numberOfItemsInPickerView(self) > 0 && item < source.numberOfItemsInPickerView(self) else {
+            return
+        }
+        
         switch self.pickerViewStyle {
         case .flat:
             self.collectionView.scrollToItem(
