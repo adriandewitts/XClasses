@@ -83,14 +83,19 @@ class Database {
 
     // TODO: Set the sync for deletes
     /// Delete objects
-    class func delete(_ object: Object) {
+    class func delete(_ object: ViewModel, local: Bool = false) {
         guard let realm = realm else {
             return
         }
 
         do {
             try realm.write {
-                realm.delete(object)
+                if local {
+                    realm.delete(object)
+                }
+                else {
+                    object._deleted = true
+                }
             }
         }
         catch {
@@ -99,14 +104,21 @@ class Database {
     }
 
     /// Delete multiple objects
-    class func delete<S: Sequence>(_ objects: S) where S.Iterator.Element: Object {
+    class func delete<S: Sequence>(_ objects: S, local: Bool = false) where S.Iterator.Element: ViewModel {
         guard let realm = realm else {
             return
         }
 
         do {
             try realm.write {
-                realm.delete(objects)
+                if local {
+                    realm.delete(objects)
+                }
+                else {
+                    for object in objects {
+                        object._deleted = true
+                    }
+                }
             }
         }
         catch {
