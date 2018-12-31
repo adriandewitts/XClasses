@@ -415,7 +415,7 @@ public class SyncController {
                             if moyaResponse.statusCode == 200 {
                                 // As long as the status code is a success, we will delete these objects
                                 if let syncRecords = Database.realm?.resolve(syncRecordsRef) {
-                                    Database.delete(syncRecords)
+                                    Database.delete(syncRecords, local: true)
                                 }
                             }
                             else if moyaResponse.statusCode == 403 {
