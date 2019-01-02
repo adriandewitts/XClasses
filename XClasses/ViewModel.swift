@@ -122,7 +122,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
         return "default"
     }
 
-    /// Can'tr rememeber why I needed to have internal versioning.
+    /// Can't rememeber why I needed to have internal versioning.
     class var internalVersion: Float {
         return 1.0
     }
