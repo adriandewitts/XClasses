@@ -18,6 +18,7 @@ extension String {
         return (regex?.stringByReplacingMatches(in: self, options: [], range: range, withTemplate: "$1_$2").lowercased())!
     }
 
+    // TODO: Remove -> Swifter Swift does this
     func camelCased() -> String {
         let items = components(separatedBy: "_")
         var camelCase = ""
