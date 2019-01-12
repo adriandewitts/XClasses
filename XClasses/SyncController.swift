@@ -203,7 +203,7 @@ public class SyncController {
                         case let .success(moyaResponse):
                             guard moyaResponse.statusCode == 200 else {
                                 if moyaResponse.statusCode == 403 {
-                                    SyncConfiguration.forbidden()
+                                    SyncConfiguration.forbidden(modelName: modelName)
                                 }
                                 else {
                                     log(error: "Server returned status code \(moyaResponse.statusCode) while trying to read sync for \(modelName). Response: \(String(describing: try? moyaResponse.mapString()))")
@@ -355,7 +355,7 @@ public class SyncController {
                                 }
                             }
                             else if moyaResponse.statusCode == 403 {
-                                SyncConfiguration.forbidden()
+                                SyncConfiguration.forbidden(modelName: String(describing: model))
                                 reject(CommonError.permissionError)
                             }
                             else {
@@ -419,7 +419,7 @@ public class SyncController {
                                 }
                             }
                             else if moyaResponse.statusCode == 403 {
-                                SyncConfiguration.forbidden()
+                                SyncConfiguration.forbidden(modelName: String(describing: model))
                                 reject(CommonError.permissionError)
                             }
                             else {
