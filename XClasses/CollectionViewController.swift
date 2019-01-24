@@ -52,7 +52,7 @@ class CollectionViewController: UIViewController, ListAdapterDataSource, ViewMod
         adapter.collectionView = collectionView
         adapter.dataSource = self as ListAdapterDataSource
 
-        loadViewModelCollection()
+       // loadViewModelCollection()
     }
 
     func loadViewModelCollection() {
