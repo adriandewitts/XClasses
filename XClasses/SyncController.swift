@@ -125,7 +125,7 @@ public class SyncController {
 
                 // Is the sync fresh and there is records, then resolve
                 let serverSync = syncModel.serverSync ?? Date.distantPast
-                let interval = serverSync.timeIntervalSince(Date())
+                let interval = Date().timeIntervalSince(serverSync)
                 if interval < freshness && !model.empty {
                     resolve(false)
                 }
