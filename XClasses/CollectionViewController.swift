@@ -52,7 +52,7 @@ class CollectionViewController: UIViewController, ListAdapterDataSource, ViewMod
         adapter.collectionView = collectionView
         adapter.dataSource = self as ListAdapterDataSource
 
-        loadViewModelCollection()
+       // loadViewModelCollection()
     }
 
     func loadViewModelCollection() {
@@ -102,7 +102,7 @@ class CollectionViewController: UIViewController, ListAdapterDataSource, ViewMod
 
 class SectionController: ListSectionController {
     var viewModel: ViewModelDelegate
-    var cellInset: UIEdgeInsets { return UIEdgeInsets(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0) }
+    var cellInset: UIEdgeInsets { return UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0) }
     var reuseIdentifier: String { return "Cell" }
     
     init(viewModel: ViewModel) {
