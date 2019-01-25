@@ -17,6 +17,8 @@ class ConfettiView: UIView {
     @IBInspectable var imagesNames: String = ""
     var colors: [UIColor] = [.red, .green, .blue, .magenta]
     var velocities = [100, 200, 300, 400]
+    @IBInspectable var scale: CGFloat = 0.15
+    @IBInspectable var scaleRange: CGFloat = 0.25
     
     private var images: [String]!
     private var dimension: Int!
@@ -82,8 +84,8 @@ class ConfettiView: UIView {
             cell.emissionRange = CGFloat(Double.pi / 4)
             cell.spin = 3.5
             cell.spinRange = 1
-            cell.scale = 0.15
-            cell.scaleRange = 0.25
+            cell.scale = scale
+            cell.scaleRange = scaleRange
             cells.append(cell)
         }
         
