@@ -105,7 +105,7 @@ class SectionController: ListSectionController {
     var cellInset: UIEdgeInsets { return UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0) }
     var reuseIdentifier: String { return "Cell" }
     
-    init(viewModel: ViewModel) {
+    init(viewModel: ViewModelDelegate) {
         self.viewModel = viewModel
         super.init()
         self.inset = cellInset
