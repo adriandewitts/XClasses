@@ -62,8 +62,8 @@ class ConfettiView: UIView {
         rootLayer.backgroundColor = UIColor.white.cgColor
     }
     
-    private func setupConfettiEmitterLayer() {
-        confettiViewEmitterLayer.emitterSize = CGSize(width: frame.size.width, height: 1)
+    func setupConfettiEmitterLayer() {
+        confettiViewEmitterLayer.emitterSize = CGSize(width: frame.size.width, height: frame.size.height)
         confettiViewEmitterLayer.emitterShape = CAEmitterLayerEmitterShape.line
         confettiViewEmitterLayer.emitterPosition = CGPoint(x: frame.size.width / 2.0, y: 0)
     }
