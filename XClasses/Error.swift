@@ -70,6 +70,7 @@ func log(error: String, file: String = #file, function: String = #function, line
 protocol AlertDelegate {
     func presentErrorAlert(error: Error, image: UIImage?, completion: (() -> Void)?)
     func presentAlert(title: String, image: UIImage?, cancel: Bool, completion: (() -> Void)?)
+    func presentAlert(title: String, message: String, image: UIImage?, okText: String, cancelText: String, cancellation: (() -> Void)?, completion: (() -> Void)?)
 }
 
 /// The Alert Delegate can automatically show errors in modals.
@@ -98,6 +99,32 @@ extension AlertDelegate {
         }
         alert.addAction(okAction)
 
+        if let viewController = self as? UIViewController {
+            viewController.present(alert, animated: true)
+        }
+    }
+    
+    func presentAlert(title: String, message: String = "", image: UIImage?, okText: String = "OK", cancelText: String = "Cancel", cancellation: (() -> Void)? = nil, completion: (() -> Void)? = nil) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        
+        if let image = image {
+            let uiImageAlertAction = UIAlertAction(title: "", style: .default, handler: nil)
+            uiImageAlertAction.setValue(image.withRenderingMode(.alwaysOriginal), forKey: "image")
+            alert.addAction(uiImageAlertAction)
+        }
+        
+        if let cancel = cancellation {
+            let cancelAction = UIAlertAction(title: NSLocalizedString(cancelText, comment: ""), style: .default) { action in
+                cancel()
+            }
+            alert.addAction(cancelAction)
+        }
+        
+        let okAction = UIAlertAction(title: NSLocalizedString(okText, comment: ""), style: .default) { action in
+            completion?()
+        }
+        alert.addAction(okAction)
+        
         if let viewController = self as? UIViewController {
             viewController.present(alert, animated: true)
         }
