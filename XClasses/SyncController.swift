@@ -101,7 +101,9 @@ public class SyncController {
         token().then(in: .utility) { token in
             for model in models {
                 // After it is written out, then do a read sequentially. This prevents it from reading the old write before the new write is written.
-                self.writeSync(model: model, token: token).then(in: .utility) {
+                let a = self.writeSync(model: model, token: token)
+                let b = self.deleteSync(model: model, token: token)
+                Promise<Void>.zip(in: .utility, a, b).then { _ in
                     self.readSync(model: model, token: token).then(in: .utility) { _ in }
                 }
             }

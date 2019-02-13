@@ -95,6 +95,7 @@ class Database {
                 }
                 else {
                     object._deleted = true
+                    object._sync = SyncStatus.deleted.rawValue
                 }
             }
         }
