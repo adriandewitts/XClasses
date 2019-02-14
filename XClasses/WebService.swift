@@ -77,26 +77,33 @@ struct PipeEncoding: ParameterEncoding {
         let records = parameters.removeValue(forKey: "records") as! Array<ViewModel>
 
         // Change to a GET temporarily and then change back, to get the URL encoded
-        let temp = urlRequest.httpMethod
+        let httpMethod = urlRequest.httpMethod
         urlRequest.httpMethod = "GET"
         urlRequest = try URLEncoding.default.encode(urlRequest, with: parameters)
-        urlRequest.httpMethod = temp
+        urlRequest.httpMethod = httpMethod
 
         var lines = [String]()
         let propertyNames = records[0].exportProperties().keys
-        lines.append(propertyNames.joined(separator: "|"))
-
-        for record in records {
-            let properties = record.exportProperties()
-            var elements = [String]()
-            for propertyName in propertyNames {
-                var value = properties[propertyName]!
-                if let i = value.index(of: "|") {
-                    value.remove(at: i)
+        if httpMethod != "DELETE" {
+            lines.append(propertyNames.joined(separator: "|"))
+            
+            for record in records {
+                let properties = record.exportProperties()
+                var elements = [String]()
+                for propertyName in propertyNames {
+                    var value = properties[propertyName]!
+                    if let i = value.index(of: "|") {
+                        value.remove(at: i)
+                    }
+                    elements.append(value)
                 }
-                elements.append(value)
+                lines.append(elements.joined(separator: "|"))
             }
-            lines.append(elements.joined(separator: "|"))
+        }
+        else {
+            for record in records {
+                lines.append(String(record.id))
+            }
         }
 
         urlRequest.httpBody = lines.joined(separator: "\n").data(using: .utf8)
