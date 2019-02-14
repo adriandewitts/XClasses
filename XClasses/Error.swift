@@ -9,7 +9,7 @@
 import Foundation
 import Firebase
 import AssistantKit
-import Instabug
+import Bugsee
 
 /// Common errors are the expected errors that we can anticipate.
 enum CommonError: LocalizedError {
@@ -62,8 +62,7 @@ func log(error: String, file: String = #file, function: String = #function, line
     let fileName = file.split(separator: "/").last?.split(separator: ".").first ?? "Unknown"
     let crashlyticsError = NSError(domain: "iOS.\(fileName).\(function)", code: line, userInfo: ["description": error])
     Crashlytics.sharedInstance().recordError(crashlyticsError)
-    IBGLog.logError("iOS.\(fileName).\(function)\n\(line)\n\(error)")
-
+    Bugsee.log("iOS.\(fileName).\(function)\n\(line)\n\(error)", level:BugseeLogLevelError)
     print("*** \(error) Called from \(function) \(file): \(line)")
 }
 
