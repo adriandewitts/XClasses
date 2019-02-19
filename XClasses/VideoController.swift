@@ -17,12 +17,15 @@ class VideoController: UIViewController {
 
     var playerLayer: AVPlayerLayer!
     var player = AVPlayer()
+    var skipImage: UIImage?
+    var skipButton: UIButton?
 
-    convenience init(video: URL, backgroundColour: UIColor = UIColor.black, completion: @escaping () -> Void = {}) {
+    convenience init(video: URL, backgroundColour: UIColor = UIColor.black, skipImage: UIImage? = nil, completion: @escaping () -> Void = {}) {
         self.init()
         self.resource = video
         self.backgroundColour = backgroundColour
         self.completion = completion
+        self.skipImage = skipImage
     }
 
     override func viewDidLoad() {
@@ -38,6 +41,37 @@ class VideoController: UIViewController {
         player.replaceCurrentItem(with: playerItem)
 
         NotificationCenter.default.addObserver(self, selector:#selector(playerDidFinishPlaying), name: .AVPlayerItemDidPlayToEndTime, object: playerItem)
+        
+        if let image = skipImage {
+            let button = UIButton(type: .custom)
+            skipButton = button
+            button.setImage(image, for: .normal)
+            view.addSubview(button)
+            button.addTarget(self, action: #selector(self.skip(_:)), for: .touchUpInside)
+            button.frame.size = CGSize(width: 60.0, height: 60.0)
+            showSkipButton()
+            view.bringSubviewToFront(button)
+        }
+    }
+    
+    func showSkipButton(screenSize: CGSize = screenSize()) {
+        guard let button = skipButton else {
+            return
+        }
+        
+        button.frame.origin = CGPoint(x: screenSize.width - button.frame.size.width - 10.0, y: screenSize.height - button.frame.size.height - 20.0)
+        button.isHidden = false
+    }
+    
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
+        showSkipButton(screenSize: size)
+    }
+    
+    @objc func skip(_ sender: UIButton) {
+        player.pause()
+        playerLayer.removeFromSuperlayer()
+        playerDidFinishPlaying()
     }
 
     @objc func playerDidFinishPlaying() {
