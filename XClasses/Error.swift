@@ -62,7 +62,7 @@ func log(error: String, file: String = #file, function: String = #function, line
     let fileName = file.split(separator: "/").last?.split(separator: ".").first ?? "Unknown"
     let crashlyticsError = NSError(domain: "iOS.\(fileName).\(function)", code: line, userInfo: ["description": error])
     Crashlytics.sharedInstance().recordError(crashlyticsError)
-    Bugsee.log("iOS.\(fileName).\(function)\n\(line)\n\(error)", level:BugseeLogLevelError)
+    Bugsee.log("iOS.\(fileName).\(function)\n\(line)\n\(error)", level: BugseeLogLevelError)
     print("*** \(error) Called from \(function) \(file): \(line)")
 }
 
