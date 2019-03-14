@@ -218,7 +218,7 @@ public class SyncController {
                                 let response = try moyaResponse.mapString()
                                 let l = response.components(separatedBy: "\n")
                                 let meta = l[0].components(separatedBy: "|")
-                                syncTimestamp = Date.from(UTCString: meta[1])!
+                                syncTimestamp = Date.from(UTCString: meta[1])
                                 let h = l[1].components(separatedBy: "|")
                                 let header = h.map { $0.camelCased() }
                                 let lines = l.dropFirst(2)
