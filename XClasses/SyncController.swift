@@ -104,8 +104,11 @@ public class SyncController {
                 let a = self.writeSync(model: model, token: token)
                 let b = self.deleteSync(model: model, token: token)
                 Promise<Void>.zip(in: .utility, a, b).then { _ in
-                    self.readSync(model: model, token: token).then(in: .utility) { _ in }
-                }
+                        self.readSync(model: model, token: token).then(in: .utility) { _ in }
+                    }.catch({ (error) in
+                        // stil read when write or delete error
+                        self.readSync(model: model, token: token).then(in: .utility) { _ in }
+                    })
             }
         }.catch() { error in
             for model in models {
@@ -387,6 +390,7 @@ public class SyncController {
                 // Make sure there are records to delete
                 let syncRecords = Database.realm!.objects(modelClass).filter("_sync = %@", SyncStatus.deleted.rawValue)
                 guard syncRecords.count > 0 else {
+                    reject(CommonError.unexpectedError)
                     return
                 }
 
@@ -419,6 +423,8 @@ public class SyncController {
                                 if let syncRecords = Database.realm?.resolve(syncRecordsRef) {
                                     Database.delete(syncRecords, local: true)
                                 }
+                                
+                                resolve(Void())
                             }
                             else if moyaResponse.statusCode == 403 {
                                 SyncConfiguration.forbidden(modelName: String(describing: model))
