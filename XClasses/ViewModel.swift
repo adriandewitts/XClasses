@@ -257,6 +257,11 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
                 case .date:
                     let dateValue = value as! Date
                     properties[name] = dateValue.toUTCString()
+                case .object:
+                    if property.objectClassName == "RealmString", let list = value as? List<RealmString> {
+                        let result = (list.map{$0.stringValue}).joined(separator: ",")
+                        properties[name] = String(describing: result)
+                    }
                 default:
                     properties[name] = String(describing: value!)
                 }
