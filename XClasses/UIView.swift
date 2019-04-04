@@ -131,3 +131,26 @@ extension UIView {
         // TODO: Set button image and text
     }
 }
+
+/// Gesture to highlight non-button view on tap
+class HighlightTapGestureRecognizer: UITapGestureRecognizer {
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesBegan(touches, with: event)
+        self.view?.alpha = 0.4
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesEnded(touches, with: event)
+        self.view?.alpha = 1.0
+    }
+    
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesCancelled(touches, with: event)
+        self.view?.alpha = 1.0
+    }
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesMoved(touches, with: event)
+        self.view?.alpha = 1.0
+    }
+}
