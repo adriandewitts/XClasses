@@ -310,18 +310,23 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
                 case .object:
                     if property.objectClassName == "RealmString" {
                         let array = dictionary[property.name]!.components(separatedBy: ",")
-                        let list = self[property.name] as! List<RealmString>
-                        if isNew {
-                            Database.update {
+                        if let list = self[property.name] as? List<RealmString> {
+                            if isNew {
+                                Database.update {
+                                    if !list.isInvalidated {
+                                        list.removeAll()
+                                    } else {
+                                        log(error: "\(property.name) has been deleted or invalidated")
+                                    }
+                                }
+                            }
+                            else {
                                 list.removeAll()
                             }
-                        }
-                        else {
-                            list.removeAll()
-                        }
-                        
-                        for element in array {
-                            list.append(RealmString.findOrCreate(element, writeTransaction: isNew))
+                            
+                            for element in array {
+                                list.append(RealmString.findOrCreate(element, writeTransaction: isNew))
+                            }
                         }
                     }
                 default:
