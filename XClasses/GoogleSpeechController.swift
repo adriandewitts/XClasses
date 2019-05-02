@@ -12,7 +12,7 @@ import AudioKit
 import AssistantKit
 
 class GoogleSpeechController: NSObject {
-    let microphone: AKMicrophone
+    let microphone: AKMicrophone?
     var response: (_ transcription: String) -> Void = {_ in}
     let host = "speech.googleapis.com"
     var apiKey: String {
@@ -34,7 +34,7 @@ class GoogleSpeechController: NSObject {
                     device = d
                 }
             }
-            try? microphone.setDevice(device)
+            try? microphone?.setDevice(device)
         }
 
         super.init()
@@ -43,7 +43,7 @@ class GoogleSpeechController: NSObject {
     func start(context: [String] = [], response: @escaping (_ transcription: String) -> Void) {
         self.response = response
         configureRecogniser(context: context)
-        microphone.avAudioNode.installTap(onBus: 0, bufferSize: 1024, format: AudioKit.format) { buffer, time in
+        microphone?.avAudioNode.installTap(onBus: 0, bufferSize: 1024, format: AudioKit.format) { buffer, time in
             //self.speechRecognition.append(buffer)
         }
 
@@ -53,7 +53,7 @@ class GoogleSpeechController: NSObject {
     /// Stops audio input and speech recognition
     func stop() {
         try? AudioKit.stop()
-        microphone.avAudioNode.removeTap(onBus: 0)
+        microphone?.avAudioNode.removeTap(onBus: 0)
         //speechRecognition.endAudio()
     }
 
