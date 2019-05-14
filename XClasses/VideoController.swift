@@ -33,7 +33,6 @@ class VideoController: UIViewController {
         try? AVAudioSession.sharedInstance().setCategory(AVAudioSession.Category.playback, mode: AVAudioSession.Mode.moviePlayback, options: AVAudioSession.CategoryOptions.defaultToSpeaker)
         let playerController = AVPlayerViewController()
         playerController.player = player
-        playerController.delegate = self
         playerController.view.backgroundColor = backgroundColour
         
         self.addChild(playerController)
