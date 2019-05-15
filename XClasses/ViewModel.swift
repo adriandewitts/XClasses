@@ -407,8 +407,10 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
     /// Upload file to Google Cloud storage.
     func putFile(key: String = "default") -> Promise<URL> {
         let selfRef = ThreadSafeReference(to: self)
-        return Promise<URL>(in: .main, { resolve, reject, _ in
+        return Promise<URL>(in: .main, { resolveHydra, reject, _ in
             guard let threadSafeSelf = Database.realm?.resolve(selfRef) else {
+                // Use a fake url to resolve this
+                resolveHydra(URL(string: "https://www.apple.com")!)
                 return
             }
 
@@ -427,7 +429,7 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
             //        }
 
             uploadTask.observe(.success) { snapshot in
-                resolve(localURL)
+                resolveHydra(localURL)
 
                 if fileAttributes.deleteOnUpload {
                     try? FileManager.default.removeItem(at: localURL)
