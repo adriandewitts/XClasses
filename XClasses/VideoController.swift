@@ -97,6 +97,7 @@ class VideoController: UIViewController {
     }
 
     override func viewWillDisappear(_ animated: Bool) {
+        completion()
         NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
     }
 }
