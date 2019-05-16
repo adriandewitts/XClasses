@@ -277,6 +277,11 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
 
     /// Imports the data from a dictionary and does the type casting that it needs to do. Used in syncronisation.
     func importProperties(dictionary: [String: String], isNew: Bool){
+        guard !self.isInvalidated else {
+            log(error: "\(String(describing: self)) has been deleted or invalidated")
+            return
+        }
+        
         let schemaProperties = objectSchema.properties
         for property in schemaProperties {
             if !property.name.hasPrefix("_") && dictionary[property.name] != nil {
@@ -310,14 +315,10 @@ public class ViewModel: Object, ViewModelDelegate, ListDiffable {
                 case .object:
                     if property.objectClassName == "RealmString" {
                         let array = dictionary[property.name]!.components(separatedBy: ",")
-                        if let list = self[property.name] as? List<RealmString> {
+                        if let list = self[property.name] as? List<RealmString>, !list.isInvalidated {
                             if isNew {
                                 Database.update {
-                                    if !list.isInvalidated {
-                                        list.removeAll()
-                                    } else {
-                                        log(error: "\(property.name) has been deleted or invalidated")
-                                    }
+                                    list.removeAll()
                                 }
                             }
                             else {
