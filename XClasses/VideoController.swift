@@ -15,7 +15,6 @@ class VideoController: UIViewController {
     var backgroundColour = UIColor.black
     var completion: () -> Void = {}
 
-    var playerLayer: AVPlayerLayer!
     var player = AVPlayer()
     var skipImage: UIImage?
     var skipButton: UIButton?
@@ -30,11 +29,15 @@ class VideoController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-
         view.backgroundColor = backgroundColour
         try? AVAudioSession.sharedInstance().setCategory(AVAudioSession.Category.playback, mode: AVAudioSession.Mode.moviePlayback, options: AVAudioSession.CategoryOptions.defaultToSpeaker)
-        playerLayer = AVPlayerLayer(player: player)
-        view.layer.insertSublayer(playerLayer, at: 0)
+        let playerController = AVPlayerViewController()
+        playerController.player = player
+        playerController.view.backgroundColor = backgroundColour
+        
+        self.addChild(playerController)
+        self.view.addSubview(playerController.view)
+        playerController.view.frame = self.view.frame
 
         let asset = AVAsset(url: resource!)
         let playerItem = AVPlayerItem(asset: asset)
@@ -70,7 +73,6 @@ class VideoController: UIViewController {
     
     @objc func skip(_ sender: UIButton) {
         player.pause()
-        playerLayer.removeFromSuperlayer()
         playerDidFinishPlaying()
     }
 
@@ -92,10 +94,10 @@ class VideoController: UIViewController {
 
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
-        playerLayer.frame = view.bounds
     }
 
     override func viewWillDisappear(_ animated: Bool) {
+        completion()
         NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
     }
 }
