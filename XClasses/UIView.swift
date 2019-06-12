@@ -124,7 +124,7 @@ extension UIView {
 
         // Set label text
         if let labelView = self as? UILabel, let stringValue = value as? String {
-            labelView.text = stringValue
+            labelView.text = NSLocalizedString(stringValue, comment: "")
             // TODO: If label is attributed, convert text to attributed from html
         }
         
@@ -202,3 +202,84 @@ extension UITapGestureRecognizer {
     
 }
 
+// MARK: Localization in storyboard
+
+/// Use for localize attributes
+class LocalizableUILabel: UILabel {
+    var didSetAttributes = false
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard !didSetAttributes, let newAttributedText = attributedText?.mutableCopy() as? NSMutableAttributedString else {
+            return
+        }
+        
+        newAttributedText.mutableString.setString(NSLocalizedString(text ?? "", comment: text ?? ""))
+        attributedText = newAttributedText
+        didSetAttributes = true
+    }
+}
+
+extension UILabel {
+    @IBInspectable var localizableText: String? {
+        get { return text }
+        set(value) {
+            text = NSLocalizedString(value ?? "", comment: value ?? "")
+        }
+    }
+    
+    @IBInspectable var localizableAttributesText: String? {
+        get { return text }
+        set(value) {
+            if let newAttributedText = attributedText?.mutableCopy() as? NSMutableAttributedString {
+                translatesAutoresizingMaskIntoConstraints = false
+                let s = NSLocalizedString(value ?? "", comment: value ?? "")
+                text = s
+                newAttributedText.mutableString.setString(s)
+                attributedText = newAttributedText
+            }
+        }
+    }
+}
+
+extension UITextField {
+    @IBInspectable var localizableText: String? {
+        get { return text }
+        set(value) {
+            text = NSLocalizedString(value ?? "", comment: value ?? "")
+        }
+    }
+    
+    @IBInspectable var localizablePlaceHolder: String? {
+        get { return placeholder }
+        set(value) {
+            placeholder = NSLocalizedString(value ?? "", comment: value ?? "")
+        }
+    }
+}
+
+extension UIButton {
+    @IBInspectable var localizableText: String? {
+        get { return titleLabel?.text }
+        set(value) {
+            setTitle(NSLocalizedString(value ?? "", comment: value ?? ""), for: .normal)
+        }
+    }
+}
+
+extension UINavigationItem {
+    @IBInspectable var localizableTitle: String? {
+        get { return title }
+        set(value) {
+            title = NSLocalizedString(value ?? "", comment: value ?? "")
+        }
+    }
+}
+
+extension UIBarButtonItem {
+    @IBInspectable var localizableTitle: String? {
+        get { return title }
+        set(value) {
+            title = NSLocalizedString(value ?? "", comment: value ?? "")
+        }
+    }
+}
