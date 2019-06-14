@@ -124,7 +124,7 @@ extension UIView {
 
         // Set label text
         if let labelView = self as? UILabel, let stringValue = value as? String {
-            labelView.text = NSLocalizedString(stringValue, comment: "")
+            labelView.text = stringValue
             // TODO: If label is attributed, convert text to attributed from html
         }
         
