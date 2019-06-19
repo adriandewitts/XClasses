@@ -66,6 +66,13 @@ func log(error: String, file: String = #file, function: String = #function, line
     print("*** \(error) Called from \(function) \(file): \(line)")
 }
 
+/// print log only in debug
+func dPrint(_ items: Any..., separator: String = " ", terminator: String = "\n") {
+    #if DEBUG
+        print(items, separator, terminator)
+    #endif
+}
+
 protocol AlertDelegate {
     func presentErrorAlert(error: Error, image: UIImage?, completion: (() -> Void)?)
     func presentAlert(title: String, image: UIImage?, cancel: Bool, completion: (() -> Void)?)
