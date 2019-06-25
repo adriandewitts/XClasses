@@ -157,9 +157,17 @@ class HighlightTapGestureRecognizer: UITapGestureRecognizer {
 
 extension UILabel {
     /// Set text color for sub string in the label
-    func colorSubString(text: String, coloredText: String, color: UIColor = .red) {
+    func colorSubString(text: String, coloredText: String, color: UIColor = .red, index: Int = 0) {
         let attributedString = NSMutableAttributedString(string: text)
-        let range = (text as NSString).range(of: coloredText)
+        
+        let ranges = text.ranges(of: coloredText)
+        let range: NSRange
+        if 0..<ranges.count ~= index {
+            range = NSRange(ranges[index], in: text)
+        } else {
+            range = (text as NSString).range(of: coloredText)
+        }
+        
         attributedString.setAttributes([NSAttributedString.Key.foregroundColor: color],
                                        range: range)
         self.attributedText = attributedString
