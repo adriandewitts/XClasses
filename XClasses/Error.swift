@@ -67,9 +67,9 @@ func log(error: String, file: String = #file, function: String = #function, line
 }
 
 /// print log only in debug
-func dPrint(_ items: Any..., separator: String = " ", terminator: String = "\n") {
+func dPrint(_ items: Any..., file: String = #file, line: Int = #line) {
     #if DEBUG
-        print(items, separator, terminator)
+        print("\(file.lastPathComponent):\(line)  \(items)")
     #endif
 }
 
