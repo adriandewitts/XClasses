@@ -197,12 +197,8 @@ extension UITapGestureRecognizer {
         // Find the tapped character location and compare it to the specified range
         let locationOfTouchInLabel = self.location(in: label)
         let textBoundingBox = layoutManager.usedRect(for: textContainer)
-        //let textContainerOffset = CGPointMake((labelSize.width - textBoundingBox.size.width) * 0.5 - textBoundingBox.origin.x,
-        //(labelSize.height - textBoundingBox.size.height) * 0.5 - textBoundingBox.origin.y);
         let textContainerOffset = CGPoint(x: (labelSize.width - textBoundingBox.size.width) * 0.5 - textBoundingBox.origin.x, y: (labelSize.height - textBoundingBox.size.height) * 0.5 - textBoundingBox.origin.y)
         
-        //let locationOfTouchInTextContainer = CGPointMake(locationOfTouchInLabel.x - textContainerOffset.x,
-        // locationOfTouchInLabel.y - textContainerOffset.y);
         let locationOfTouchInTextContainer = CGPoint(x: locationOfTouchInLabel.x - textContainerOffset.x, y: locationOfTouchInLabel.y - textContainerOffset.y)
         let indexOfCharacter = layoutManager.characterIndex(for: locationOfTouchInTextContainer, in: textContainer, fractionOfDistanceBetweenInsertionPoints: nil)
         return NSLocationInRange(indexOfCharacter, targetRange)
@@ -210,7 +206,7 @@ extension UITapGestureRecognizer {
     
 }
 
-// MARK: Localization in storyboard
+// MARK: Localization in storyboard. Use these extension properties in storyboard to localize strings
 
 /// Use for localize attributes
 class LocalizableUILabel: UILabel {
@@ -228,6 +224,7 @@ class LocalizableUILabel: UILabel {
 }
 
 extension UILabel {
+    /// Localize text
     @IBInspectable var localizableText: String? {
         get { return text }
         set(value) {
@@ -235,6 +232,7 @@ extension UILabel {
         }
     }
     
+    /// Localize attributed text
     @IBInspectable var localizableAttributesText: String? {
         get { return text }
         set(value) {
@@ -250,6 +248,7 @@ extension UILabel {
 }
 
 extension UITextField {
+    /// Localize text
     @IBInspectable var localizableText: String? {
         get { return text }
         set(value) {
@@ -257,6 +256,7 @@ extension UITextField {
         }
     }
     
+    /// Localize place holder text
     @IBInspectable var localizablePlaceHolder: String? {
         get { return placeholder }
         set(value) {
@@ -266,6 +266,7 @@ extension UITextField {
 }
 
 extension UIButton {
+    /// Localize text
     @IBInspectable var localizableText: String? {
         get { return titleLabel?.text }
         set(value) {
@@ -275,6 +276,7 @@ extension UIButton {
 }
 
 extension UINavigationItem {
+    /// Localize title text
     @IBInspectable var localizableTitle: String? {
         get { return title }
         set(value) {
@@ -284,6 +286,7 @@ extension UINavigationItem {
 }
 
 extension UIBarButtonItem {
+    /// Localize title text
     @IBInspectable var localizableTitle: String? {
         get { return title }
         set(value) {

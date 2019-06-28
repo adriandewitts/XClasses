@@ -95,6 +95,7 @@ extension String {
         return addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
     }
     
+    /// Get all the ranges of the substring that matched in the string
     func ranges(of substring: String, options: CompareOptions = [], locale: Locale? = nil) -> [Range<Index>] {
         var ranges: [Range<Index>] = []
         while ranges.last.map({ $0.upperBound < self.endIndex }) ?? true,
