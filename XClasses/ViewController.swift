@@ -54,3 +54,49 @@ class ViewController: UIViewController, ViewModelManagerDelegate, AlertDelegate 
         }
     }
 }
+
+extension UIViewController {
+    func showParental(cancelable:Bool = false, onCompletion: ((UIAlertController.TextInputResult) -> Void)? = nil) {
+        let cancelTitle = cancelable ? NSLocalizedString("Cancel", comment: "") : nil
+        let alertController = UIAlertController(title: NSLocalizedString("Parental Permission", comment: ""), message: NSLocalizedString("Please enter your year of birth.", comment: ""), cancelButtonTitle: cancelTitle, okButtonTitle: NSLocalizedString("Confirm", comment: ""), validate: .predicate { text in
+            var numberText = text
+            // support arabic number
+            let map = [
+                "٠": "0",
+                "١": "1",
+                "٢": "2",
+                "٣": "3",
+                "٤": "4",
+                "٥": "5",
+                "٦": "6",
+                "٧": "7",
+                "٨": "8",
+                "٩": "9"
+            ]
+            
+            map.forEach { numberText = numberText.replacingOccurrences(of: $0, with: $1) }
+            // valid age is from 18 to 117
+            let currentYear = Date().year
+            guard let input = Int(numberText), currentYear - input >= 18,  currentYear - input < 117 else {
+                return false
+            }
+            
+            return true
+            }, textFieldConfiguration: { textField in
+                textField.placeholder = NSLocalizedString("Year of birth", comment: "")
+                textField.keyboardType = .numberPad
+        }, textFieldshouldChange: { string in
+            let numberPattern = "٠١٢٣٤٥٦٧٨٩0123456789"
+            guard CharacterSet(charactersIn: numberPattern).isSuperset(of: CharacterSet(charactersIn: string)) else {
+                return false
+            }
+            
+            return true
+        }
+        ) { result in
+            onCompletion?(result)
+        }
+        
+        present(alertController, animated: true, completion: nil)
+    }
+}
