@@ -154,3 +154,143 @@ class HighlightTapGestureRecognizer: UITapGestureRecognizer {
         self.view?.alpha = 1.0
     }
 }
+
+extension UILabel {
+    /// Set text color for sub string in the label
+    func colorSubString(text: String, coloredText: String, color: UIColor = .red, index: Int = 0) {
+        let attributedString = NSMutableAttributedString(string: text)
+        
+        let ranges = text.ranges(of: coloredText)
+        let range: NSRange
+        if 0..<ranges.count ~= index {
+            range = NSRange(ranges[index], in: text)
+        } else {
+            range = (text as NSString).range(of: coloredText)
+        }
+        
+        attributedString.setAttributes([NSAttributedString.Key.foregroundColor: color],
+                                       range: range)
+        self.attributedText = attributedString
+    }
+}
+
+extension UITapGestureRecognizer {
+    
+    /// Detect tap in text range in UILabel
+    func didTapAttributedTextInLabel(label: UILabel, inRange targetRange: NSRange) -> Bool {
+        // Create instances of NSLayoutManager, NSTextContainer and NSTextStorage
+        let layoutManager = NSLayoutManager()
+        let textContainer = NSTextContainer(size: CGSize.zero)
+        let textStorage = NSTextStorage(attributedString: label.attributedText!)
+        
+        // Configure layoutManager and textStorage
+        layoutManager.addTextContainer(textContainer)
+        textStorage.addLayoutManager(layoutManager)
+        
+        // Configure textContainer
+        textContainer.lineFragmentPadding = 0.0
+        textContainer.lineBreakMode = label.lineBreakMode
+        textContainer.maximumNumberOfLines = label.numberOfLines
+        let labelSize = label.bounds.size
+        textContainer.size = labelSize
+        
+        // Find the tapped character location and compare it to the specified range
+        let locationOfTouchInLabel = self.location(in: label)
+        let textBoundingBox = layoutManager.usedRect(for: textContainer)
+        let textContainerOffset = CGPoint(x: (labelSize.width - textBoundingBox.size.width) * 0.5 - textBoundingBox.origin.x, y: (labelSize.height - textBoundingBox.size.height) * 0.5 - textBoundingBox.origin.y)
+        
+        let locationOfTouchInTextContainer = CGPoint(x: locationOfTouchInLabel.x - textContainerOffset.x, y: locationOfTouchInLabel.y - textContainerOffset.y)
+        let indexOfCharacter = layoutManager.characterIndex(for: locationOfTouchInTextContainer, in: textContainer, fractionOfDistanceBetweenInsertionPoints: nil)
+        return NSLocationInRange(indexOfCharacter, targetRange)
+    }
+    
+}
+
+// MARK: Localization in storyboard. Use these extension properties in storyboard to localize strings
+
+/// Use for localize attributes
+class LocalizableUILabel: UILabel {
+    var didSetAttributes = false
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard !didSetAttributes, let newAttributedText = attributedText?.mutableCopy() as? NSMutableAttributedString else {
+            return
+        }
+        
+        newAttributedText.mutableString.setString(NSLocalizedString(text ?? "", comment: text ?? ""))
+        attributedText = newAttributedText
+        didSetAttributes = true
+    }
+}
+
+extension UILabel {
+    /// Localize text
+    @IBInspectable var localizableText: String? {
+        get { return text }
+        set(value) {
+            text = NSLocalizedString(value ?? "", comment: value ?? "")
+        }
+    }
+    
+    /// Localize attributed text
+    @IBInspectable var localizableAttributesText: String? {
+        get { return text }
+        set(value) {
+            if let newAttributedText = attributedText?.mutableCopy() as? NSMutableAttributedString {
+                translatesAutoresizingMaskIntoConstraints = false
+                let s = NSLocalizedString(value ?? "", comment: value ?? "")
+                text = s
+                newAttributedText.mutableString.setString(s)
+                attributedText = newAttributedText
+            }
+        }
+    }
+}
+
+extension UITextField {
+    /// Localize text
+    @IBInspectable var localizableText: String? {
+        get { return text }
+        set(value) {
+            text = NSLocalizedString(value ?? "", comment: value ?? "")
+        }
+    }
+    
+    /// Localize place holder text
+    @IBInspectable var localizablePlaceHolder: String? {
+        get { return placeholder }
+        set(value) {
+            placeholder = NSLocalizedString(value ?? "", comment: value ?? "")
+        }
+    }
+}
+
+extension UIButton {
+    /// Localize text
+    @IBInspectable var localizableText: String? {
+        get { return titleLabel?.text }
+        set(value) {
+            setTitle(NSLocalizedString(value ?? "", comment: value ?? ""), for: .normal)
+        }
+    }
+}
+
+extension UINavigationItem {
+    /// Localize title text
+    @IBInspectable var localizableTitle: String? {
+        get { return title }
+        set(value) {
+            title = NSLocalizedString(value ?? "", comment: value ?? "")
+        }
+    }
+}
+
+extension UIBarButtonItem {
+    /// Localize title text
+    @IBInspectable var localizableTitle: String? {
+        get { return title }
+        set(value) {
+            title = NSLocalizedString(value ?? "", comment: value ?? "")
+        }
+    }
+}
